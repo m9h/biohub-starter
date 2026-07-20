@@ -132,3 +132,34 @@ Six top notebooks surveyed. Findings:
 
 Their architecture is worth copying. Their **constants are not** -- re-derive
 them locally against an embryo-held-out split.
+
+---
+
+## Measurement harness (A0.0) — validated 2026-07-19
+
+`scripts/eval_per_sample.py` + `scripts/compare_configs.py`. Three-way self-test on
+held-out embryo `44b6` (20 videos), metric = `score`:
+
+| test | delta | 95% CI | p | verdict |
+|---|---|---|---|---|
+| null (50ep vs itself) | +0.0000 | [0, 0] | 1.000 | not significant |
+| known-different (50ep vs 300ep) | **-0.0204** | [-0.0346, -0.0069] | 0.0024 | **SIGNIFICANT** |
+| known-similar (300ep vs 350ep) | +0.0003 | [-0.0186, +0.0142] | 0.981 | not significant |
+
+Calibrated in both directions: catches a 0.020 difference, does not call 0.0003 real.
+
+**Resolution floor: ~+/-0.015 on 20 videos.** Anything smaller is unmeasurable at that
+sample size -- use the full 71-video fold for finer comparisons.
+
+Why a bootstrap and not a t-test: `adj_edge_jaccard` is weighted by
+`w_i = TP+FP+FN` and `division_jaccard` is micro-averaged, so a paired t-test on
+unweighted per-video means tests a DIFFERENT quantity than the leaderboard reports.
+The bootstrap resamples videos as pairs and recomputes the full weighted statistic.
+
+`eval_per_sample.py` hard-errors when `n_adj != n` -- a GT geff missing
+`estimated_number_of_nodes` silently drops that sample from `score` while it still
+contributes to the micro-averaged terms.
+
+Division metrics with frame tolerance (BC(i)) need `traccuracy` (added as the
+`metrics` extra; API is `DivisionMetrics(max_frame_buffer=N)`). The repo's own
+`division_metrics.py` has no frame-tolerance parameter.
