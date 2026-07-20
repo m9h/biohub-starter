@@ -107,8 +107,10 @@ def main() -> None:
                      - statistic([ra[i] for i in pick], args.metric))
 
     lo, hi = np.nanpercentile(deltas, [2.5, 97.5])
-    # two-sided bootstrap p: how often the resampled delta crosses zero
-    p = 2 * min((deltas <= 0).mean(), (deltas >= 0).mean())
+    # Two-sided bootstrap p: how often the resampled delta crosses zero.
+    # Clamped to 1.0 -- when every resampled delta is exactly 0 (identical
+    # configs) both tail fractions are 1.0 and the doubling would give 2.0.
+    p = min(1.0, 2 * min((deltas <= 0).mean(), (deltas >= 0).mean()))
 
     label_a = ra[0].get("label") or args.a.stem
     label_b = rb[0].get("label") or args.b.stem
