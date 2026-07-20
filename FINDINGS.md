@@ -185,3 +185,44 @@ contributes to the micro-averaged terms.
 Division metrics with frame tolerance (BC(i)) need `traccuracy` (added as the
 `metrics` extra; API is `DivisionMetrics(max_frame_buffer=N)`). The repo's own
 `division_metrics.py` has no frame-tolerance parameter.
+
+---
+
+## A0.2 — `--use-ilp` is worth +0.042 (measured 2026-07-20)
+
+Held-out embryo `44b6`, 20 videos, 402ep weights, `--det-threshold 0.96875`,
+paired bootstrap over the same videos.
+
+| metric | greedy | **ILP** | delta | 95% CI | p |
+|---|---|---|---|---|---|
+| **score** | 0.8596 | **0.9012** | **+0.0416** | [+0.0317, +0.0527] | 0.0000 |
+| adj_edge_jaccard | 0.8583 | 0.9012 | +0.0429 | [+0.0335, +0.0539] | 0.0000 |
+| division_jaccard | 0.0127 | **0.0000** | -0.0127 | [-0.0339, +0.0000] | 0.22 (n.s.) |
+
+Counts:
+
+| | div TP/FP/FN | edge TP/FP/FN | n_pred |
+|---|---|---|---|
+| greedy | 2 / **153** / 2 | 4358 / 398 / 331 | 690,956 |
+| ILP | **0 / 0 / 4** | 4392 / **224** / 297 | 636,528 |
+
+**The ILP predicts exactly ZERO divisions** at the default `--ilp-division-weight 1.0`.
+A division is a pure cost the solver never finds worth paying. That single change:
+
+- removed all 153 false forks, cutting edge FP 398 -> 224 (most of the +0.043)
+- cut `n_pred` by 54k, which also helps the adjustment multiplier
+- **but removed the 2 true divisions too**, zeroing the division term
+
+One flag reaches the clean public recipe's level (~0.90-0.909), with embryo-holdout
+validation rather than leaderboard probing. And the entire 0.1 division block now
+sits behind a **single scalar knob** (`--ilp-division-weight`), currently untuned.
+
+### Runtime cost
+
+| | s/video | projected for ~199-sample hidden test |
+|---|---|---|
+| greedy | 21.6 | 1.2 h |
+| **ILP** | **81.6** | **4.5 h** of a 12 h cap |
+
+ILP is 3.8x slower. Still comfortable alone, but it constrains how much TTA can be
+stacked on top — 8x TTA on the detection branch would not fit alongside it.
