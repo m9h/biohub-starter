@@ -223,3 +223,33 @@ sits behind a **single scalar knob** (`--ilp-division-weight`), currently untune
 
 ILP is 3.8x slower. Still comfortable alone, but it constrains how much TTA can be
 stacked on top — 8x TTA on the detection branch would not fit alongside it.
+
+### The ILP division weight is a dead end (swept 2026-07-20)
+
+Held-out `44b6`, 20 videos, 402ep weights, `--use-ilp`, sweeping `--ilp-division-weight`:
+
+| division_weight | score | division_jaccard | div TP/FP/FN | behaviour |
+|---|---|---|---|---|
+| **1.0** (default) | **0.9012** | 0.0000 | 0 / 0 / 4 | full suppression |
+| 0.0 | 0.8736 | 0.0127 | 2 / 154 / 2 | divisions leak in |
+| -0.5 | 0.8596 | 0.0127 | 2 / 153 / 2 | **collapses to greedy** |
+
+Monotone and saturated in both directions. `>= 1.0` already emits zero divisions so
+nothing larger can help; `-0.5` reproduces the greedy baseline exactly (same score
+to four decimals, same counts). The `-1.0` and `-2.0` runs were cancelled once
+saturation was established.
+
+**Making divisions cheaper does not buy good divisions -- it buys the same garbage
+greedy produced** (154 FP for 2 TP, precision ~1.3%). The trade is lopsided:
+recovering `division_jaccard = 0.0127` is worth **+0.0013** on score but costs
+**-0.028** on the edge term, because false forks fragment tracks and fragmentation
+hurts `adj_edge_jaccard` far more than two real divisions help.
+
+**At current division precision, suppressing divisions entirely is optimal**, and
+the shipped default is already right. The 0.1 division block is reachable only with
+better division *evidence* -- a classifier or geometric features -- not by
+re-weighting the solver. Turning this knob before precision improves is strictly
+harmful.
+
+Same structural lesson as the `node_recall` trap: the metric punishes
+indiscriminate prediction.
