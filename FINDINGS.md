@@ -52,10 +52,6 @@ Checkpoint SHA256 (all three genuinely distinct):
 **Caveat:** these weights were probably trained on both embryos, so even the
 held-out run is contaminated. A clean number needs retraining on one embryo only.
 
-**Caveat:** the 50ep weights were probably trained on both embryos, so even the
-held-out run is contaminated. A clean number needs retraining on one embryo only
-(~50 epochs x 89 min on a single GB10 = ~3 days).
-
 ---
 
 ## The one big opportunity: division false positives
@@ -141,7 +137,8 @@ maximally fragile across an embryo shift.
 
 Six top notebooks surveyed. Findings:
 
-1. **Nobody trains.** All load the prepackaged 50-epoch weights unchanged.
+1. **Nobody trains.** All load the prepackaged support-pack weights unchanged
+   (the `50ep-v1` dataset, which actually contains a **402-epoch** checkpoint).
 2. Everything above ~0.89 comes from **post-processing geometry**, not modelling.
 3. Pipeline: baseline weights -> ILP for node selection -> `motion_relink_edges`
    **discards the ILP's edges** and re-solves with a velocity-predicted Hungarian
@@ -164,8 +161,8 @@ held-out embryo `44b6` (20 videos), metric = `score`:
 
 | test | delta | 95% CI | p | verdict |
 |---|---|---|---|---|
-| null (50ep vs itself) | +0.0000 | [0, 0] | 1.000 | not significant |
-| known-different (50ep vs 300ep) | **-0.0204** | [-0.0346, -0.0069] | 0.0024 | **SIGNIFICANT** |
+| null (402ep vs itself) | +0.0000 | [0, 0] | 1.000 | not significant |
+| known-different (402ep vs 300ep) | **-0.0204** | [-0.0346, -0.0069] | 0.0024 | **SIGNIFICANT** |
 | known-similar (300ep vs 350ep) | +0.0003 | [-0.0186, +0.0142] | 0.981 | not significant |
 
 Calibrated in both directions: catches a 0.020 difference, does not call 0.0003 real.

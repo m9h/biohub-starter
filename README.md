@@ -16,7 +16,7 @@ where there is nothing to gain.
 Three things determine almost every strategic decision:
 
 1. **Nobody trains.** Every top public notebook loads the same prepackaged
-   50-epoch weights untouched. Everything above ~0.89 is post-processing
+   support-pack weights untouched. Everything above ~0.89 is post-processing
    geometry. If you start by training a model, you are burning time.
 
 2. **There are only two embryos** (`6bba`, `44b6`) and the hidden test set is
@@ -47,7 +47,7 @@ cd kaggle-cell-tracking-competition && uv sync --extra dev
 kaggle competitions download -c biohub-cell-tracking-during-development -p DATA
 cd DATA && unzip -q biohub-cell-tracking-during-development.zip
 
-# 3. The 50-epoch weights everyone actually uses
+# 3. The weights everyone actually uses (dataset says "50ep"; it is really 402ep)
 kaggle datasets download pilkwang/biohub-tracking-support-pack-50ep-v1 --unzip -p support_pack
 
 # 4. Point the repo at the data
@@ -80,6 +80,20 @@ Expected, on held-out `44b6`:
 score=0.8596  edge_jaccard=0.8567  adj_edge_jaccard=0.8583
 division_jaccard=0.0127 (TP=2 FP=153 FN=2)  node_recall=0.9987
 ```
+
+**Now add `--use-ilp` and re-run.** That one flag is worth **+0.042** (0.8596 ->
+0.9012, paired bootstrap CI [+0.0317, +0.0527], p<0.0001) — it replaces greedy
+linking with a global flow-consistent solve:
+
+```
+score=0.9012  adj_edge_jaccard=0.9012  division_jaccard=0.0000
+```
+
+Note the catch: at the default `--ilp-division-weight 1.0` the solver emits
+**zero divisions**. It removes all 153 false forks (edge FP 398 -> 224) and the 2
+true ones with them. The whole 0.1 division term is behind that single scalar.
+Costs 3.8x runtime (81.6 vs 21.6 s/video; ~4.5 h projected for the real ~199-sample
+hidden test, of a 12 h cap).
 
 ### Understand the data
 
@@ -145,6 +159,6 @@ Every number is reproducible with the scripts here. Negative results are stated
 as prominently as positive ones — several are more valuable.
 
 Where a claim is uncertain it is flagged inline. The largest known caveat: the
-50-epoch weights were probably trained on both embryos, so even held-out numbers
+402-epoch weights were probably trained on both embryos, so even held-out numbers
 are contaminated. A clean measurement needs retraining on one embryo (~3 days on
 a single GB10).

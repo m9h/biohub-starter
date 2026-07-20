@@ -68,7 +68,7 @@
 - 2 embryos only: 6bba (128 samples), 44b6 (71). Test is embryo-DISJOINT.
 - 151 GT divisions total across 199 videos. 112 videos have ZERO. Mean 0.76/video.
 - 133,318 annotated nodes; ~2.8 per timepoint of ~30-130 real cells.
-- Held-out 44b6, 50ep weights: score 0.8596, div_jaccard 0.0127 (TP=2 FP=153 FN=2), recall 0.9987.
+- Held-out 44b6, 402ep support-pack weights: score 0.8596, div_jaccard 0.0127 (TP=2 FP=153 FN=2), recall 0.9987.
 - We over-predict divisions ~10x (7.75/video predicted vs 0.76 GT).
 - Division FP suppression alone is worth ~ +0.05 score.
 

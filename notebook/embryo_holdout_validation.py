@@ -14,7 +14,7 @@
 # embryo-disjoint test set, that seems worth fixing. This notebook provides:
 #
 # 1. A drop-in **embryo-disjoint split generator**
-# 2. A measured **checkpoint comparison** on a held-out embryo (50ep vs 300ep vs 350ep)
+# 2. A measured **checkpoint comparison** on a held-out embryo (402ep vs 350ep vs 300ep)
 # 3. **Division statistics** from ground truth — and why we all over-predict ~10x
 # 4. A **runtime projection** for the real hidden test size
 # 5. A trap: **`node_recall` moves opposite to score**
