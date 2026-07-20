@@ -96,27 +96,37 @@ print("\nUse with:  predict_unet_transformer.py --splits embryo_splits.json --sp
 # %% [markdown]
 # ## 3. Checkpoint comparison on a held-out embryo
 #
-# There are public "checkpoint pin" datasets at 300ep and 350ep, alongside the 50ep
-# support pack that essentially everyone uses. Nobody had published a comparison, so
-# I ran one: trained weights evaluated on **held-out embryo `44b6`** (20 videos),
-# `--det-threshold 0.96875`.
+# ### First, a correction that may be useful to everyone
 #
-# | checkpoint | score | edge_jaccard | division_jaccard | div TP/FP/FN | node_recall |
-# |---|---|---|---|---|---|
-# | **50ep (support pack)** | **0.8596** | 0.8567 | 0.0127 | 2 / 153 / 2 | 0.9987 |
-# | 300ep pin | 0.8392 | 0.8409 | 0.0102 | 2 / 193 / 2 | 0.9972 |
-# | 350ep pin | 0.8395 | 0.8412 | 0.0119 | 2 / 164 / 2 | 0.9979 |
+# The public dataset `pilkwang/biohub-tracking-support-pack-**50ep**-v1` — which most
+# public notebooks load — does **not** contain a 50-epoch checkpoint. Its
+# `checkpoint_last.pth` carries `epoch = 402`, and its `ARTIFACT_MANIFEST.json` is
+# named `biohub-tracking-support-pack-**400ep**-snapshot-v1`.
 #
-# **More training is worse** — about −0.020, and it plateaus rather than recovering.
-# The mechanism is visible in the division column: extra epochs produce *more false
-# forks* (153 → 193), consistent with overfitting to the sparse annotation pattern.
+# ```python
+# torch.load("checkpoint_last.pth")["epoch"]   # -> 402
+# ```
 #
-# So the 50ep checkpoint the field standardized on is near-optimal, and both published
-# deeper pins are actively harmful. **Training longer is a dead end.**
+# I initially took the dataset name at face value and concluded "longer training is
+# worse." That was backwards. Corrected comparison, on **held-out embryo `44b6`**
+# (20 videos), `--det-threshold 0.96875`:
 #
-# *Caveat, stated plainly: the 50ep weights were probably trained on both embryos, so
-# even this held-out run is contaminated. It is a valid **relative** comparison; the
-# absolute number is optimistic. A clean measurement needs retraining on one embryo.*
+# | checkpoint | actual epochs | score | edge_jaccard | division_jaccard | div TP/FP/FN | node_recall |
+# |---|---|---|---|---|---|---|
+# | **support pack** (`50ep-v1`) | **402** | **0.8596** | 0.8567 | 0.0127 | 2 / 153 / 2 | 0.9987 |
+# | 350ep pin | 350 | 0.8395 | 0.8412 | 0.0119 | 2 / 164 / 2 | 0.9979 |
+# | 300ep pin | 300 | 0.8392 | 0.8409 | 0.0102 | 2 / 193 / 2 | 0.9972 |
+#
+# **More training is better, monotonically** across the range we can observe. The
+# +0.0204 gap from 350ep to 402ep is significant under a paired bootstrap over the
+# 20 videos (95% CI [+0.0069, +0.0346], p=0.0024).
+#
+# Whether it has plateaued by 402 is **unknown** — there is no public checkpoint
+# beyond it. If anyone has one, that comparison is worth running.
+#
+# *Caveat: these weights were likely trained on both embryos, so even this held-out
+# run is contaminated. It is a valid **relative** comparison; the absolute number is
+# optimistic.*
 
 # %% [markdown]
 # ## 4. Divisions: we all over-predict by ~10x
@@ -245,7 +255,7 @@ except ImportError:
 # | Finding | Status |
 # |---|---|
 # | Only 2 embryos; test is embryo-disjoint | Random splits leak |
-# | 300ep / 350ep checkpoints | **−0.020** — worse than 50ep |
+# | Support pack is 402ep, not "50ep" | dataset name is wrong; more training **helps** (+0.020) |
 # | Divisions | 151 in training; we over-predict ~10× |
 # | Division headroom | up to **+0.10**, currently ~0.001 |
 # | Embryo-wide synchrony prior | **negative** — wrong developmental window |

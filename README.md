@@ -123,8 +123,14 @@ Ranked by measured headroom:
 3. **Honest recalibration** — re-derive the public constants against an
    embryo-held-out split. They were leaderboard-probed and will not transfer.
 
-Do **not** spend effort on: longer training, better detection, architecture
-changes, or faster graph code. All measured, all dead ends — see `FINDINGS.md`.
+Do **not** spend effort on: better detection (recall already 0.9987), architecture
+changes, or faster graph code (Hungarian costs <15 s across the whole test set).
+All measured — see `FINDINGS.md`.
+
+**Longer training is NOT on that list.** An earlier version of this file said it
+was; that was based on mis-reading the support pack as 50 epochs when it is
+**402**. More training measurably helps (+0.020 from 350ep to 402ep, significant),
+and whether it plateaus past 402 is unknown.
 
 **Before any of it**, check Ultrack's central claim: are the missed divisions
 actually *segmentation merges upstream* rather than linking failures? If so, all

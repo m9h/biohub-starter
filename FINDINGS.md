@@ -24,11 +24,33 @@ cells are real cells, not negatives. The baseline handles this with
 
 ## Baseline performance (held-out embryo `44b6`, 20 videos, det-threshold 0.96875)
 
-| checkpoint | score | edge_jaccard | division_jaccard | div TP/FP/FN | node_recall |
-|---|---|---|---|---|---|
-| **50ep (support pack)** | **0.8596** | 0.8567 | 0.0127 | 2 / **153** / 2 | 0.9987 |
-| 300ep pin | 0.8392 | 0.8409 | 0.0102 | 2 / 193 / 2 | 0.9972 |
-| 350ep pin | 0.8395 | 0.8412 | 0.0119 | 2 / 164 / 2 | 0.9979 |
+> **CORRECTION (2026-07-20).** The public dataset
+> `pilkwang/biohub-tracking-support-pack-**50ep**-v1` does **not** contain a
+> 50-epoch checkpoint. Its `checkpoint_last.pth` carries `epoch = 402`, and its
+> `ARTIFACT_MANIFEST.json` is named `biohub-tracking-support-pack-**400ep**-snapshot-v1`.
+> The "50ep" in the dataset title is wrong. An earlier version of this file took
+> the name at face value and concluded "longer training is worse" -- **that
+> conclusion was backwards.** Corrected below.
+
+| checkpoint | actual epochs | score | edge_jaccard | division_jaccard | div TP/FP/FN | node_recall |
+|---|---|---|---|---|---|---|
+| **support pack** (`50ep-v1`) | **402** | **0.8596** | 0.8567 | 0.0127 | 2 / **153** / 2 | 0.9987 |
+| 350ep pin | 350 | 0.8395 | 0.8412 | 0.0119 | 2 / 164 / 2 | 0.9979 |
+| 300ep pin | 300 | 0.8392 | 0.8409 | 0.0102 | 2 / 193 / 2 | 0.9972 |
+
+**More training is BETTER, and monotonically so** over the range we can observe
+(300 -> 350 -> 402). The +0.0204 gap from 350ep to 402ep is significant under the
+paired bootstrap (CI [+0.0069, +0.0346], p=0.0024). Whether it has plateaued by
+402 is **unknown** -- we have no checkpoint beyond it.
+
+Checkpoint SHA256 (all three genuinely distinct):
+
+    12f6881e...  support pack (402ep)
+    dfb848aa...  350ep pin
+    12b5d32a...  300ep pin
+
+**Caveat:** these weights were probably trained on both embryos, so even the
+held-out run is contaminated. A clean number needs retraining on one embryo only.
 
 **Caveat:** the 50ep weights were probably trained on both embryos, so even the
 held-out run is contaminated. A clean number needs retraining on one embryo only
@@ -76,7 +98,7 @@ termination 14x costlier than initiation suppresses fragmentation, which feeds
 
 | Tried | Result |
 |---|---|
-| **Longer training** (300ep, 350ep) | **-0.020**. More epochs -> more false forks (153 -> 193). 50ep is near-optimal. |
+| ~~**Longer training** (300ep, 350ep)~~ | **RETRACTED 2026-07-20.** This entry claimed longer training hurt. It was based on mis-reading the support pack as 50 epochs when it is **402**. The true ordering is 402ep > 350ep > 300ep -- more training **helps**. See the correction above. |
 | **Anisotropic U-Net pooling** | Redundant. `--downsample 1,4,4` already makes the input isotropic (64x64x64 from a 104 µm cube). |
 | **Better detection** | node_recall is already 0.9987. Nothing left here. |
 | **Faster graph/assignment code** | Hungarian at real scale (65-194 nodes/frame) costs **<15 s across the entire test set**. Not a bottleneck. |
