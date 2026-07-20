@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+DATA/
+support_pack/
+*.zarr/
+*.geff/
+*.pth
+*.zip
