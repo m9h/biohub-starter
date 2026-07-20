@@ -186,3 +186,165 @@ NOT A TRACKER: CellTracksColab (downstream track analysis only)
   ELEPHANT   : NO explicit division model; relies on flow net trained on validated links
   Mastodon   : GOTCHA - the Simple LAP Linker has split detection DISABLED.
                Use the standard Sparse LAP Linker for lineage tracing.
+
+---
+
+# MATHEMATICAL TECHNIQUES (added 2026-07-19)
+
+## The organizing fact
+
+Division is a ONE-TO-TWO mapping, and nearly every imported technique assumes a bijection.
+  - Hungarian: feasible set contains no split
+  - Optical flow: single-valued correspondence
+  - Kalman: fixed state dimension
+  - Balanced OT: fixed marginals, one unit of mother mass cannot become two
+  - Contrastive re-ID: identity is an equivalence relation, so mother~d1 and mother~d2
+    forces d1~d2 -- exactly the pair you must separate
+
+Techniques survive in proportion to how naturally they express 1->2: either by explicitly
+constraining out-degree <= 2 (ILP) or by being many-to-one by construction
+(offset-to-center regression, parental softmax).
+
+## LOAD-BEARING (2020-2026)
+
+  ILP / min-cost-flow with explicit division variables  <- the dominant paradigm
+  ultrack; linajea
+  Trackastra's PARENTAL SOFTMAX  (<=1 parent, many children; one-to-many permitted,
+    many-to-one structurally forbidden; division edges upweighted lambda=10)
+  Offset-to-center regression (many-to-one by construction -- both daughters regress
+    to the same mother center naturally)
+  StarDist-3D (but its failure mode is PRECISELY mitotic: star-convexity + NMS merge
+    condensed apposed daughters -- which is what ultrack's multi-hypothesis absorbs)
+  Track-oriented MHT logic, in ILP disguise (Reid 1979 -> "generate candidate tracks,
+    solve set-packing" is structurally identical to modern ILP formulations)
+  ByteTrack-style confidence stratification
+  CTC metric suite + CHOTA + traccuracy
+
+## DISPLACED / WRONG
+
+  Kalman filtering            -- cell appearance non-discriminative; embryo motion not
+                                 smooth-linear; fixed state dim cannot express division
+  DeepSORT-style re-ID        -- premise INVERTS: cells near-identical by construction,
+                                 least distinctive exactly at mitotic rounding
+  JPDA                        -- marginalises away the association variable, but that
+                                 variable IS the scientific deliverable
+  GNN message passing         -- MEASURABLY WRONG. HOCT reports adjusted homophily on the
+                                 line graph of CTC candidate graphs at H_adj = 0.01 +/- 0.04,
+                                 indistinguishable from random. Aggregation averages in noise.
+                                 Ben-Haim's cell-tracker-GNN authors concede division edges
+                                 rarely fire; lineage recovered by post-hoc heuristic.
+  Optical flow                -- brightness constancy + single-valued => mitosis appears
+                                 only as a divergence spike
+  Spectral methods            -- cannot express in/out-degree or acyclicity constraints
+
+## ASCENDANT
+
+  HOCT (arXiv 2607.11754, 2026-07-13, Bragantini/Theodoro/Royer)
+    Candidate LINK is the token (not the node). 3D RoPE w/ learnable per-head frequencies,
+    line-to-line distance attention bias with attractive AND repulsive heads, multi-frame
+    parental softmax, two-pass ILP.
+    Ranks 1st overall on CLB/LNK/BIO across all 16 CTC datasets.
+    Six days old, unrefereed, and reports NO zebrafish results despite the lab having data.
+
+## ABSENT FROM THE FIELD == OPEN
+
+  - Hypergraph cell tracking. Division IS intrinsically a 3-ary (parent,d1,d2) relation and
+    nobody has written a tracker that says so directly. BUT HOCT reaches the same place via
+    edge-attention -- read it before claiming novelty.
+  - Unbalanced OT on 3D+t embryos. arXiv search "Sinkhorn" AND "cell tracking" -> ZERO hits.
+    MECHANISM: let the mother's row marginal exceed 1 with finite tau, so the plan splits one
+    row across two columns, and the tau*KL marginal-violation penalty becomes the MITOSIS PRIOR.
+    (Waddington-OT's growth-rate trick applied per-object instead of per-population.)
+    Nearest precedents: SCOTT (SIAM J Math Data Sci 2020, doi:10.1137/19M1253976) -- weighted
+    Gromov-Wasserstein with explicit division/merge detection, but 2D ONLY.
+    ARCOS.px (J Cell Sci 2025, doi:10.1242/jcs.264022) -- unbalanced Sinkhorn, but for
+    signalling events, not lineages.
+    CAVEAT: cite Waddington-OT as precedent that UOT encodes proliferation, NEVER as evidence
+    OT works for tracking. scRNA-seq OT matches POPULATIONS across destructive snapshots;
+    tracking assigns INDIVIDUAL identity across paired frames.
+  - Lineage-aware / hyperbolic metrics
+  - Any published quantification of sister-cell ID-swaps as a distinct error class
+
+## PHD filters / random finite sets -- mine, don't adopt
+
+Mahler's PHD prediction equation contains a SPAWNING term (intensity of new targets born
+conditional on an existing target's state), put there for missiles separating from boosters.
+That is a mathematically exact model of mitosis, not an analogy.
+Nguyen/Vo/Vo/Kim/Choi, IEEE TSP 2021, doi:10.1109/TSP.2021.3111705 -- labeled RFS producing
+actual lineage trees with a morphology-tuned spawning model.
+But plain PHD discards identity (fatal) and none has placed competitively on CTC.
+
+## Metric learning -- the transitivity break
+
+Sister cells immediately post-division are SIMULTANEOUSLY the hardest possible negatives
+(same genome, cell-cycle phase, fluorophore load, adjacent position, near-mirror morphology)
+and the most semantically positive pair in the dataset. BATCH-HARD MINING PREFERENTIALLY
+SELECTS EXACTLY THEM, concentrating maximum gradient where labels are ill-posed.
+Published responses:
+  - exclude divisions, recover lineage post hoc (Ben-Haim)
+  - separate mitosis head, mother/daughter never posed as positive OR negative
+    (Zyss et al., BMC Bioinformatics 27(1):30, 2025, doi:10.1186/s12859-025-06344-5)
+  - relax identity to LINEAGE -- CELLECT (Zhou et al., Nat Methods 22:2411-2422, 2025,
+    doi:10.1038/s41592-025-02886-x), 64-D per-voxel embeddings, "one-versus-two" triplet
+    loss so daughters are same-lineage. >7,000 cells. Most on-target contrastive work.
+  - make division the SIGNAL via time-arrow prediction (Gallusser et al., MICCAI 2023,
+    arXiv:2305.05511 -- mitosis is the dominant source of temporal irreversibility)
+
+## Metrics
+
+AOGM/TRA (Matula et al., PLOS ONE 2015, doi:10.1371/journal.pone.0144959) is a weighted graph
+edit distance; default w_FN=10, w_NS=5, w_EA=1.5 -- one missed detection costs ~7 added edges.
+BC(i) = branching correctness at frame tolerance i, the division-specific measure.
+REPORT BC(0..2): the spread separates "misses divisions" from "finds them but mistimes them".
+`traccuracy` implements CTC metrics + generalized AOGM + DivisionMetrics + CHOTA with an
+error-annotated graph export.
+
+Why MOT metrics fail for embryos:
+  (a) every MOT metric presupposes GT is a partition into identity classes bijectively
+      matchable to predictions; division forces a convention and neither is a superset
+  (b) error severity is EXPONENTIALLY NON-UNIFORM IN TIME -- a mis-assigned division at the
+      4-cell stage corrupts thousands of descendants, but AOGM charges one edit either way
+  (c) post-division daughter swaps are often biologically unresolvable yet still charged
+
+## DATA CAVEATS
+
+  - Zebrahub's published tracks were PRODUCED BY ULTRACK -- algorithm-generated, not gold standard.
+  - There is NO zebrafish dataset in the Cell Tracking Challenge (embryo sets are C. elegans,
+    Drosophila, Tribolium). CTC rankings transfer to this task only BY ANALOGY.
+  - ELEPHANT evidence that division-aware flow is cheap to train: 1,162 links from 10
+    timepoints, including only 18 links covering 9 divisions, sufficed.
+
+## TALKS / VIDEO (verified URLs)
+
+  Bragantini, "Introduction to ultrack" (I2K 2023, 1h12m)  <- BEST SINGLE RESOURCE
+    https://www.youtube.com/watch?v=uBXXr43lovQ
+  Bragantini, "ultrack: large-scale versatile cell tracking" (SciPy 2024, 32m)
+    https://www.youtube.com/watch?v=98dahngkNOI
+  Bragantini, ultrack (CBIAS 2023, 13m)  https://www.youtube.com/watch?v=SilkHzHgSk8
+  Royer, "Sci Viz: Napari" (1h16m)  https://www.youtube.com/watch?v=51PV-3tf9A8
+  Royer lab, "DaXi light-sheet" (1h)  https://www.youtube.com/watch?v=o1IY73Jacwg
+    ^ the microscope behind Zebrahub -- explains anisotropy, view fusion, drift artifacts
+  Royer lab, "Aydin: image denoising" (1h03m)  https://www.youtube.com/watch?v=LFe-Q02B1KA
+  Royer, "Multi-Dimensional Microscopy Datasets" (iBiology, 20m)
+    https://www.youtube.com/watch?v=tSMRoW0-NFY
+  Royer, "Beyond the Cell Atlas Conference" (24m)  https://www.youtube.com/watch?v=fY4e7IvQCUI
+  Keller, "Imaging and Reconstructing Mouse Development at the Single-Cell Level" (iBiology)
+    https://www.youtube.com/watch?v=R2I4c6C9Ths
+  Weigert, "Nuclei segmentation with StarDist" (NEUBIAS Academy@Home)
+    https://www.youtube.com/watch?v=Amn_eHRGX5M
+  Tinevez, "Tracking cells and organelles with TrackMate" (NEUBIAS)  https://youtu.be/ITwamUmna-Q
+  Kreshuk, "ilastik beyond pixel classification" (NEUBIAS)  https://youtu.be/_ValtSLeAr0
+
+  Royer Group talks page:  https://biohub.org/royer/talks
+  NEUBIAS Academy@Home archive (highest-value index):
+    https://eubias.org/NEUBIAS/training-schools/neubias-academy-home/neubias-academy-archive-spring2020/
+  Robert Haase, full BioImage Analysis lecture series (TU Dresden):
+    https://www.youtube.com/playlist?list=PL5ESQNfM5lc7SAMstEu082ivW4BDMvd0U
+  I2K 2024 playlist: https://www.youtube.com/playlist?list=PLdA9Vgd1gxTbvxmtk9CASftUOl_XItjDN
+  linajea zebrafish lineage datasets:
+    https://janelia.figshare.com/articles/dataset/Zebrafish_data_for_whole-embryo_lineage_reconstruction_with_linajea/24968724
+
+NOT FOUND (searched, absent -- do not go looking again):
+  Teun Huijben, Thibaut Goldsborough, Carsten Marr, Fabrice Cordelieres, Uwe Schmidt (solo).
+  No Trackastra talk recording. Jan Funke has a channel but no linajea/motile talk found.
+  No Royer-lab talks on NeurIPS/CVPR/ISBI/ELMI/EMBL/CSHL channels.
