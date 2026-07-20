@@ -110,3 +110,79 @@ comparable `t`, which is unverified.
 - Goldsborough's published work (InstanSeg) is 2D histology segmentation, not tracking.
 - MOT transformers (TrackFormer/MOTR): poor fit — assume distinguishable appearance and no object
   splitting. Both fail for identical dividing nuclei.
+
+---
+
+# TOOL/METHOD SURVEY (added 2026-07-19)
+
+## What actually wins on 3D+t embryos (Cell Tracking Challenge)
+
+Two families of CLASSICAL combinatorial optimization, not end-to-end deep tracking.
+Both treat mitosis as a first-class variable INSIDE the optimization:
+
+1. **Iterative DP / Viterbi with explicit motion model** — KTH-SE.
+   Magnusson et al. 2015, IEEE TMI 34(4):911-929, doi:10.1109/TMI.2014.2370951.
+   Adds one track at a time; each iteration builds a trellis of every way to insert a
+   track, solved by Viterbi shortest-path, with SWAP operations letting a new track edit
+   earlier ones. Mitosis is a first-class arc with probability p_S.
+
+2. **ILP over multi-hypothesis segmentation** — ultrack, linajea.
+   Segmentation and linking solved JOINTLY (overlap constraints force a disjoint
+   selection from a hierarchy of nested candidates).
+
+CTC 3D embryo standings (approximate; decoded from leaderboard image, verify):
+  Fluo-N3DH-CE  : THU-CN 0.850 | CZB-US/ultrack 0.844 | KTH-SE 0.829
+  Fluo-N3DL-DRO : CZB-US 0.708 | KTH-SE 0.617 | JAN-US/linajea 0.591
+  Fluo-N3DL-TRIF: CZB-US 0.841 | MPI-GE 0.804
+
+## The ILP substrate: motile
+
+`motile` (github.com/funkelab/motile, v1.0.1 2026-07-16) is the shared ILP layer.
+Trackastra's ILP mode IS motile. linajea is its ancestor. Backend ilpy -> Gurobi/SCIP.
+No detection - takes a candidate TrackGraph with learnable costs.
+API churn is real (v0.4 -> v1.0 in four months) - PIN THE VERSION.
+
+### linajea division constraints (the formulation to copy)
+
+    sum_prev x_e + appear - x_n = 0      # exactly one parent
+    sum_next x_e - 2*x_n <= 0            # THE ONE-TO-TWO ALLOWANCE
+    sum_next x_e - split <= 1            # split reification
+    sum_next x_e - 2*split >= 0
+    split + child + continuation - x_n = 0
+
+Split/child carry LEARNED costs -> division is scored, not merely permitted.
+Contrast our current pipeline: fixed division_weight=1.0, then rate-cap the output.
+
+## TGMM's mitosis detector — the only trained one in the field
+
+Amat et al. 2014, Nat Methods 11:951, doi:10.1038/nmeth.3036. Software is DEAD (2018,
+CUDA-era Windows C++) but the design transplants:
+  - gentleBoost on 3D ELLIPTICAL HAAR FEATURES in the nucleus's own ellipsoidal frame
+  - KL-divergence splitScore between parent and candidate daughter Gaussians
+  - Mahalanobis arbitration: parent centroid vs daughter axes
+  - TGMM 2.0 adds max-flow/min-cut partition of supervoxels into two non-touching sets
+Free signal: a nucleus elongates (anisotropic covariance) BEFORE splitting; each
+daughter's covariance determinant ~ half the parent's after.
+
+## Maintenance status (2026-07)
+
+ALIVE     : ultrack (v0.7.2), motile (v1.0.1), Trackastra (v0.5.4), Mastodon,
+            TrackMate, ELEPHANT (a Mastodon client extension, not an alternative)
+DORMANT   : btrack (~6mo gap), linajea (2023 - lab moved to motile)
+DEAD      : TGMM (2018), EmbedTrack (2022, and 2D ONLY - disqualifying for this task)
+NOT A TRACKER: CellTracksColab (downstream track analysis only)
+
+## Division handling by tool (how each represents one-to-two)
+
+  ultrack    : explicit `division[i]` binary; nodes + division == sum(edges_out) + disappear
+  linajea    : node_split / node_child / node_continuation, learned costs
+  motile     : reified NodeSplit under MaxParents(1) + MaxChildren(2); also models MERGES
+  Trackastra : greedy mode = one degree check (out_degree >= 2), no division cost;
+               ILP mode delegates to motile
+  btrack     : explicit Fates.DIVIDE hypothesis, prior scaled by lambda_branch;
+               States enum (INTERPHASE/PROMETAPHASE/METAPHASE) feeds a mitotic prior
+  TrackMate  : divisions only representable in LAP step 2 (segment start -> mid-segment);
+               cost includes intensity-ratio term (daughter ~ half parent intensity)
+  ELEPHANT   : NO explicit division model; relies on flow net trained on validated links
+  Mastodon   : GOTCHA - the Simple LAP Linker has split detection DISABLED.
+               Use the standard Sparse LAP Linker for lineage tracing.
