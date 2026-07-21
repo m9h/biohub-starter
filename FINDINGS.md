@@ -253,3 +253,42 @@ harmful.
 
 Same structural lesson as the `node_recall` trap: the metric punishes
 indiscriminate prediction.
+
+---
+
+## Phase 1 — Post-processing (fold 0, full 71-video held-out `44b6`)
+
+Null baseline recomputed on the **full 71 videos** (earlier numbers used a
+20-video subset): `score = 0.8981`, `adj_edge_jaccard = 0.8943`,
+`division_jaccard = 0.0385`, `n_adj == n == 71` (clean, no sample dropout).
+
+### A1.1 — Minimum track-length filter — SHIPS (+0.0126)
+
+Drop every weakly-connected lineage component whose temporal span is < N frames,
+**exempting any component that contains a division** (a division TP needs an intact
+5-generation window). Sweep on fold 0:
+
+| N | score | Δ vs null |
+|---|---|---|
+| null (off) | 0.8981 | — |
+| 3 | 0.9067 | +0.0086 |
+| **4** | **0.9107** | **+0.0126** |
+| 6 (public value) | 0.9037 | +0.0056 |
+| 8 | 0.8908 | −0.0073 |
+| 10 | 0.8703 | −0.0278 |
+| 12 | 0.8497 | −0.0484 |
+
+Smooth unimodal curve peaking at **N=4**. Paired bootstrap N=4 vs null:
+**+0.0126, 95% CI [+0.0091, +0.0162], p=0.0000 (10k resamples) — significant.**
+`division_jaccard` is unchanged at 0.0385 across all N (keep-division-components
+works — no divisions lost to the filter).
+
+**The local optimum is 4, not the public 6.** The public constant costs −0.0070
+relative to the re-derived value — a concrete instance of why LB-probed constants
+do not transfer to an embryo-held-out split.
+
+Caveats: (1) N was chosen as the argmax of a sweep and its p-value reported on the
+same fold, so +0.0126 is mildly optimistic (winner's curse); the curve's smoothness
+argues it is not noise. (2) Needs confirmation on **fold 1** (train `44b6` →
+test `6bba`), which requires a GPU prediction run — pending. Above N≈8 the filter
+turns harmful by deleting real short lineages.
