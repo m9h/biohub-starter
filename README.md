@@ -59,6 +59,10 @@ way so you don't have to:
    hand-tuned constants rather than modelling the biology. This is the open
    question a newcomer can actually contribute to.
 
+New to the field? Start with the intellectual history that makes every tool here
+make sense: [`notes/HISTORY_AND_IDEAS.md`](notes/HISTORY_AND_IDEAS.md) — from
+Sulston's hand-drawn worm lineage to why we run an ILP solver.
+
 Full numbers behind each claim: [`FINDINGS.md`](FINDINGS.md).
 Papers and background: [`notes/READING_LIST.md`](notes/READING_LIST.md).
 Our running leaderboard record: [`CV_LB_LOG.md`](CV_LB_LOG.md).
