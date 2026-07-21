@@ -12,16 +12,22 @@ measurements; we track co-movement, not equality.
 
 | date (UTC) | kernel v | config | held-out CV | public LB | CV−LB | notes |
 |---|---|---|---|---|---|---|
-| 2026-07-20 | v3 | 402ep + `--use-ilp`, det 0.96875, **no LB-tuned constants** | 0.9012 | **0.867** | +0.034 | First point. Tracks — CV mildly optimistic, no decorrelation. |
+| 2026-07-20 | v3 | 402ep + `--use-ilp`, det 0.96875, **no LB-tuned constants** | 0.8981 | **0.867** | +0.031 | First point. Tracks — CV mildly optimistic, no decorrelation. (CV recomputed on full 71-video fold 0.) |
+| 2026-07-21 | v4 | + motion-relink 8 µm + min-track-len 4 (Phase 1) | 0.9181 | **0.879** | +0.039 | **Improvement transfers.** CV +0.020 → LB +0.012, same direction. |
 
 ## Reading of the first point
 
-- **Correlation holds.** CV 0.034 above LB, same order — the local signal is
-  trustworthy. Not the divergence that would trip the kill-trigger.
-- **0.867 with no LB-probed constants** sits ~0.042 below the public clean-recipe
-  cluster (~0.909). That gap is the post-processing we have not built yet
-  (motion relink, gap closing, min-track-length) — headroom is where the plan
-  places it, not in training or detection.
+- **Correlation holds across two points.** CV sits a consistent +0.03–0.04 above
+  LB, and — the decisive test — a local improvement *transfers*: Phase 1's +0.020
+  CV produced +0.012 LB, same direction. The local signal predicts the
+  leaderboard. No decorrelation; the kill-trigger is not tripped.
+- **Transfer is attenuated, as expected.** The public LB set mixes both embryos,
+  so there is less fragmentation to recover than on the embryo-disjoint held-out
+  set — a smaller LB gain from the same post-processing is the correct behaviour,
+  not a warning sign.
+- **Still below the public clean-recipe cluster (~0.909)** because we run *no*
+  LB-probed constants; the remaining gap is gap-closing and the division block,
+  not training or detection.
 - **Runtime, measured on Kaggle (T4x2):** 96.6 s/video -> **5.34 h projected for
   199** of a 12 h cap. ~55% margin; room for light TTA later.
 
