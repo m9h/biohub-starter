@@ -1,36 +1,67 @@
-# Biohub Cell Tracking — Starter Kit
+# Learning Cell Tracking in Development — a Starter Kit
 
-Onboarding for the Kaggle competition
+A hands-on way into **computational developmental biology**, using a real, open
+problem as the vehicle: the Kaggle competition
 [**Biohub - Cell Tracking During Development**](https://www.kaggle.com/competitions/biohub-cell-tracking-during-development)
-(CZ Biohub SF / Royer Group). 3D+time light-sheet zebrafish embryos: detect
-nuclei, link them across time, recover divisions and lineages.
+(CZ Biohub SF / Royer Group).
 
-This repo is **not** a solution. It is the shortest path from zero to a
-correctly-measured baseline, plus the findings that save you from spending weeks
-where there is nothing to gain.
+The problem, in one sentence: given a 3D movie of a living zebrafish embryo, find
+every cell nucleus, follow each one through time, and catch the moments a cell
+divides into two. Do that well and you have reconstructed a **lineage tree** —
+the record of which cell came from which, the thing developmental biologists have
+wanted to read directly since the 19th century. Light-sheet microscopy now
+produces these movies faster than anyone can annotate them by hand, so the
+bottleneck is computational, and it is genuinely unsolved.
+
+If you are a student, this repo is meant to get you *doing* the science in an
+afternoon instead of spending three weeks on setup and dead ends. It is **not** a
+solution and it will not hand you a leaderboard rank. It gives you a
+correctly-measured baseline to start experimenting from, the reading that grounds
+the field, and — just as important — a record of the paths that look promising
+but lead nowhere, so you can spend your time where the real questions are.
+
+### What you'll actually learn by doing this
+
+- **Working with 3D+time microscopy data** — OME-Zarr volumes, anisotropic
+  voxels, the GEFF graph format tracking data is stored in
+- **The detect → link → divide pipeline** that underlies every modern cell
+  tracker: a 3D U-Net for detection, learned edge scoring for linking, and
+  integer-linear-programming for globally consistent tracks
+- **Honest evaluation** — why the obvious validation split silently lies here,
+  and how to build one that doesn't. This is the transferable skill; it outlasts
+  the competition.
+- **Where machine learning meets biology** — divisions are the open problem, and
+  the best ideas come from knowing how cells actually divide, not from tuning
 
 ---
 
-## Read this first
+## Three things the data will teach you first
 
-Three things determine almost every strategic decision:
+Every strong decision in this problem flows from these. We learned them the slow
+way so you don't have to:
 
-1. **Nobody trains.** Every top public notebook loads the same prepackaged
-   support-pack weights untouched. Everything above ~0.89 is post-processing
-   geometry. If you start by training a model, you are burning time.
+1. **You don't need to train a model to start.** Every top public notebook loads
+   the same prepackaged weights untouched — everything above ~0.89 is
+   *post-processing geometry*, not deep learning. That's liberating: you can make
+   real progress with graph algorithms and biology, no GPU training required.
 
-2. **There are only two embryos** (`6bba`, `44b6`) and the hidden test set is
-   embryo-disjoint. The baseline's default split is random *by sample*, so both
-   embryos land on both sides — every score measured that way is inflated. Of six
-   top public notebooks surveyed, **none did any cross-validation.**
+2. **There are only two embryos** (`6bba`, `44b6`), and the hidden test embryo is
+   one neither of them. The baseline's default validation splits *by sample*, so
+   both embryos leak onto both sides and every score it reports is inflated. Of
+   six top public notebooks surveyed, **none built a split that measures what the
+   competition actually tests.** Fixing this is [the repo's main
+   contribution](#build-honest-validation-this-repos-main-contribution), and it's
+   a lesson that applies far beyond cell tracking.
 
-3. **Divisions are the open problem.** Held-out baseline gets 2 true divisions
-   against 153 false ones — `division_jaccard = 0.0127` out of a possible 1.0.
-   That block is worth up to **+0.10** and the field addresses it with
-   leaderboard-tuned constants rather than modelling.
+3. **Divisions are the frontier.** The baseline finds 2 real divisions against 153
+   false ones (`division_jaccard = 0.0127` out of a possible 1.0). That block is
+   worth up to **+0.10** of the score, and the field currently papers over it with
+   hand-tuned constants rather than modelling the biology. This is the open
+   question a newcomer can actually contribute to.
 
-Full detail with numbers: [`FINDINGS.md`](FINDINGS.md).
-Papers: [`notes/READING_LIST.md`](notes/READING_LIST.md).
+Full numbers behind each claim: [`FINDINGS.md`](FINDINGS.md).
+Papers and background: [`notes/READING_LIST.md`](notes/READING_LIST.md).
+Our running leaderboard record: [`CV_LB_LOG.md`](CV_LB_LOG.md).
 
 ---
 
@@ -123,9 +154,10 @@ synchrony test. Reproduces every number in `FINDINGS.md`.
 
 ---
 
-## Where to spend your effort
+## Where the open questions are
 
-Ranked by measured headroom:
+If you want to make a real dent — or just learn the most — these are the live
+problems, ranked by measured headroom. Each is a place a newcomer can contribute:
 
 1. **Division false-positive suppression** — ~+0.05 from precision alone. Start
    with Linajea-style backward-offset regression (daughters regress a vector at
@@ -152,13 +184,21 @@ three items above are aimed at the wrong stage.
 
 ---
 
-## Provenance
+## How this was made (and how to read it)
 
-Assembled 2026-07-19 from a single day of measurement on a DGX Spark (GB10).
-Every number is reproducible with the scripts here. Negative results are stated
-as prominently as positive ones — several are more valuable.
+Assembled from measurement, not opinion. Every number is reproducible with the
+scripts here — run them, don't trust us. **Negative results are stated as
+prominently as positive ones**; in research the dead end you don't have to walk
+is often the most valuable thing someone can hand you, and this repo tries to
+hand you several.
 
-Where a claim is uncertain it is flagged inline. The largest known caveat: the
-402-epoch weights were probably trained on both embryos, so even held-out numbers
-are contaminated. A clean measurement needs retraining on one embryo (~3 days on
-a single GB10).
+Where a claim is uncertain it is flagged inline — a habit worth copying. The
+largest known caveat: the 402-epoch weights were probably trained on both
+embryos, so even our held-out numbers are mildly optimistic. A fully clean
+measurement needs retraining on one embryo (~3 days on a single GPU) — itself a
+good first project if you want one.
+
+First measured leaderboard result: held-out-embryo **CV 0.9012 → public LB
+0.867** — the two track, so the validation is trustworthy. The running record,
+plus the offline-packaging recipe for submitting to a no-internet code
+competition, lives in [`CV_LB_LOG.md`](CV_LB_LOG.md).
