@@ -292,3 +292,31 @@ same fold, so +0.0126 is mildly optimistic (winner's curse); the curve's smoothn
 argues it is not noise. (2) Needs confirmation on **fold 1** (train `44b6` →
 test `6bba`), which requires a GPU prediction run — pending. Above N≈8 the filter
 turns harmful by deleting real short lineages.
+
+### A1.4 — Motion relink (constant-velocity, gated Hungarian) — SHIPS (+0.0074)
+
+Reconnect prematurely-terminated tracks (out-degree-0 nodes not in the last frame)
+to next-frame orphan starts (in-degree-0 nodes not in the first frame), matching a
+constant-velocity prediction to candidates by Hungarian assignment within a µm gate.
+Because it only ever links a loose end to an orphan, it can create **neither a
+division nor a merge** — it repairs single tracks only.
+
+Runs *before* the length filter (rescue fragments into longer tracks, then filter).
+Gate sweep, stacked on min-track-len=4:
+
+| gate (µm) | score | Δ vs mtl4 |
+|---|---|---|
+| off (mtl4 only) | 0.9107 | — |
+| 6 | 0.9175 | +0.0068 |
+| **8** | **0.9181** | **+0.0074** |
+| 10 | 0.9132 | +0.0025 |
+
+Optimum at **8 µm** — again between the public tight/relaxed constants (6/10).
+Paired bootstrap relink8+mtl4 vs mtl4: **+0.0074, 95% CI [+0.0037, +0.0114],
+p=0.0000 — significant.** Relink alone (no length filter) vs null: 0.9049 (+0.0068).
+
+`division_jaccard` unchanged at 0.0385 — relink rescues single tracks, not the
+5-generation windows a division TP needs (that is A1.3 gap-closing's job).
+
+**Phase 1 chain to date:** null 0.8981 → min-track-len 4 → motion-relink 8 µm →
+**0.9181** (+0.0199 over null, p=0.0000). Same fold-1 confirmation caveat applies.
