@@ -320,3 +320,21 @@ p=0.0000 — significant.** Relink alone (no length filter) vs null: 0.9049 (+0.
 
 **Phase 1 chain to date:** null 0.8981 → min-track-len 4 → motion-relink 8 µm →
 **0.9181** (+0.0199 over null, p=0.0000). Same fold-1 confirmation caveat applies.
+
+### Fold-1 confirmation — the Phase 1 chain generalizes across embryos
+
+The chain (motion-relink 8 µm + min-track-len 4) was tuned entirely on fold 0
+(held-out `44b6`). Applied **unchanged** to fold 1 (train `44b6` → test `6bba`,
+128 held-out videos, run on a GCP L4):
+
+| fold | test embryo | null | + chain | Δ | p |
+|---|---|---|---|---|---|
+| 0 | `44b6` (71) | 0.8981 | 0.9181 | +0.0199 | <0.0001 |
+| **1** | **`6bba` (128)** | **0.9092** | **0.9195** | **+0.0103** | **<0.0001** |
+
+Significant on **both** embryos. The smaller fold-1 Δ is expected — `6bba` starts
+higher (less fragmentation to recover) — but the direction and significance hold on
+an embryo never seen during tuning. **This rules out winner's-curse overfitting to
+fold 0.** Caveat: N=4 and gate=8 were still *chosen* on fold 0; a formal
+pick-on-1-test-on-0 re-derivation would be strictly stronger, but the effect is
+robust enough (significant on both) to trust.
