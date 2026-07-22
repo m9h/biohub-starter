@@ -63,6 +63,11 @@ New to the field? Start with the intellectual history that makes every tool here
 make sense: [`notes/HISTORY_AND_IDEAS.md`](notes/HISTORY_AND_IDEAS.md) — from
 Sulston's hand-drawn worm lineage to why we run an ILP solver.
 
+Prefer to read it as a runnable notebook? The **Developmental Cell Tracking
+Starter Notebook** is published on Kaggle (live embryo-disjoint splits + all
+results): https://www.kaggle.com/code/mhough/developmental-cell-tracking-starter-notebook
+(source: [`notebook/embryo_holdout_validation.ipynb`](notebook/embryo_holdout_validation.ipynb)).
+
 Full numbers behind each claim: [`FINDINGS.md`](FINDINGS.md).
 Paper / Benchmark manuscript: [`notes/PAPER.md`](notes/PAPER.md).
 Presentation slide deck: [`notes/SLIDES.md`](notes/SLIDES.md).
