@@ -1,6 +1,7 @@
 # Empirical Benchmarking, Leakage-Free Validation, and Division Precision Bottlenecks in 3D+t Light-Sheet Cell Lineage Reconstruction
 
 **Authors:** Morgan Hough et al.  
+**Affiliation:** DevoWorm Group · Biopunk Lab  
 **Repository:** [m9h/biohub-starter](https://github.com/m9h/biohub-starter)  
 **Target Venue:** *Bioinformatics / Kaggle Competition Baseline Report*  
 **Date:** July 2026  
@@ -80,11 +81,17 @@ We implement two localized graph post-processing passes:
 1. **Minimum Track Length Filter (`min_track_len`)**: Prunes short spurious track fragments ($< N$ frames) while explicitly preserving components containing division events. Sweeping $N$ on Fold 0 yields a smooth unimodal peak at **$N=4$** (+0.0126 score gain, $p < 0.0001$), outperforming the public leaderboard-probed constant of $N=6$.
 2. **Motion Relinking (`motion_relink`)**: Reconnects prematurely terminated loose-end tracks to orphan track starts in frame $t+1$ via constant-velocity position prediction and gated Hungarian assignment. Gating at **8.0 $\mu$m** yields an additional +0.0074 score gain ($p < 0.0001$).
 
-| Stage | Config / Parameters | Held-out CV (Fold 0) | Public LB | Delta (CV) |
+| Stage | Config / Parameters | Held-out CV (Fold 0, 71 videos) | Public LB | Delta (CV) |
 |---|---|---|---|---|
-| Baseline | Greedy, 402ep weights | 0.8596 | — | — |
-| + ILP Solver | `--use-ilp` (default division weight) | 0.9012 | 0.867 | +0.0416 |
-| + Post-Process | `min_track_len=4` + `motion_relink=8.0µm` | **0.9181** | **0.879** | **+0.0169** |
+| Baseline (ILP) | `--use-ilp`, det 0.96875, 402ep weights | 0.8981 | 0.867 | — |
+| + Post-Process | `min_track_len=4` + `motion_relink=8.0µm` | **0.9181** | **0.879** | **+0.0199** |
+
+> The greedy→ILP gain itself (**+0.0416**, 0.8596→0.9012, 95% CI [+0.0317, +0.0527],
+> $p<10^{-4}$; §3.2) was measured on an earlier **20-video pilot** of Fold 0. On the
+> full 71-video harness the ILP result *is* the 0.8981 baseline above, so we report
+> the post-processing delta (+0.0199) on that consistent basis — the same null used
+> in the Fold-1 comparison below. Mixing the pilot and full-harness numbers in one
+> column would conflate sample sizes.
 
 ### 3.4 Cross-Embryo Generalization (Fold-1 Confirmation)
 

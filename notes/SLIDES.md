@@ -28,6 +28,7 @@ style: |
 **Kaggle Competition Evaluation & Methodology**  
 *CZ Biohub SF / Royer Lab Benchmark*  
 
+Morgan Hough — DevoWorm Group · Biopunk Lab  
 Repository: `github.com/m9h/biohub-starter`  
 
 ---
