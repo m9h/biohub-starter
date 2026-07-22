@@ -417,3 +417,32 @@ case for LEARNED division evidence -- Linajea-style backward-offset regression
 (train a head so each daughter predicts a vector to its parent; mutual agreement =
 division). That is a training investment, not a post-processing pass, and it is the
 next real Phase 2 step -- it needs the GPU.
+
+### A2.3 — learned candidate edge-prob is NOT division-discriminative
+
+Before training a division head, we tested whether the transformer's *existing*
+candidate scores already separate divisions. Patched prediction to dump the pre-ILP
+candidate graph (up to 2 scored children per parent) and compared, on fold 0
+(44b6), the weaker of the two daughter-edge probs for real divisions vs the top-2
+min-prob of every false candidate fork:
+
+| | n | min-edge-prob median |
+|---|---|---|
+| real divisions | 12 | 0.764 |
+| false candidate forks | **58,181** | 0.623 |
+
+The signal exists but is swamped by base rate. Precision at every threshold:
+
+| thr | recall(real) | #false ≥ thr | precision |
+|---|---|---|---|
+| 0.5 | 1.00 | 58181 | 0.000 |
+| 0.7 | 0.58 | 16129 | 0.000 |
+| 0.9 | 0.33 | 478 | 0.008 |
+
+**No usable operating point.** ~0.02% of candidate forks are real divisions; a
+single learned-linking threshold cannot overcome that. The edge scorer was trained
+for one-parent-per-child linking and carries no division-specific signal. This is
+the quantitative statement of why divisions are the unsolved block: rare event
+(base rate ~1/4800 candidate forks) + sparse GT (~125 training divisions) + a model
+with no division head. A trained offset-regression head faces the same base-rate
+wall; whether a multi-feature classifier can beat it is the open question.
