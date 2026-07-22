@@ -1,6 +1,6 @@
 # Empirical Benchmarking, Leakage-Free Validation, and Division Precision Bottlenecks in 3D+t Light-Sheet Cell Lineage Reconstruction
 
-**Authors:** Morgan Hough et al.  
+**Authors:** Morgan G Hough et al.  
 **Affiliation:** DevoWorm Group · Biopunk Lab  
 **Repository:** [m9h/biohub-starter](https://github.com/m9h/biohub-starter)  
 **Target Venue:** *Bioinformatics / Kaggle Competition Baseline Report*  

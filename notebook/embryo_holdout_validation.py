@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Embryo-Held-Out Validation for This Competition
 #
-# *Morgan Hough — DevoWorm Group · Biopunk Lab.
+# *Morgan G Hough — DevoWorm Group · Biopunk Lab.
 # Full write-up + code: [github.com/m9h/biohub-starter](https://github.com/m9h/biohub-starter)*
 #
 # **TL;DR** — The 199 training samples come from only **two embryos**, and the hidden

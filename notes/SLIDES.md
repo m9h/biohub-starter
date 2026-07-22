@@ -3,7 +3,7 @@ marp: true
 theme: default
 paginate: true
 header: "Learning Cell Tracking in Development — Biohub Kaggle Competition"
-footer: "biohub-starter Baseline Evaluation | Morgan Hough et al."
+footer: "biohub-starter Baseline Evaluation | Morgan G Hough et al."
 style: |
   section {
     font-family: 'Inter', system-ui, sans-serif;
@@ -28,7 +28,7 @@ style: |
 **Kaggle Competition Evaluation & Methodology**  
 *CZ Biohub SF / Royer Lab Benchmark*  
 
-Morgan Hough — DevoWorm Group · Biopunk Lab  
+Morgan G Hough — DevoWorm Group · Biopunk Lab  
 Repository: `github.com/m9h/biohub-starter`  
 
 ---
