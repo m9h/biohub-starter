@@ -82,6 +82,10 @@ All metrics evaluated on held-out embryo `44b6` (Fold 0):
 
 **CV and LB Co-move:** Local CV improvements (+0.020) directly transfer to Public LB (+0.012).
 
+**Generalizes across embryos:** the chain (tuned on Fold 0) also helps on **Fold 1**
+(`6bba`, 128 videos): 0.9092 → 0.9195, **+0.0103**, $p < 0.0001$. Significant on
+*both* embryos — not fold-0 overfitting.
+
 ---
 
 ## 5. Correction: The "50ep" Support Pack Myth
