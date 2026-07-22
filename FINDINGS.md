@@ -446,3 +446,29 @@ the quantitative statement of why divisions are the unsolved block: rare event
 (base rate ~1/4800 candidate forks) + sparse GT (~125 training divisions) + a model
 with no division head. A trained offset-regression head faces the same base-rate
 wall; whether a multi-feature classifier can beat it is the open question.
+
+### A2.4 — multi-feature division classifier — FAILS the kill criterion
+
+The sanctioned single shot: pre-filter candidate forks to plausible ones, extract
+9 features (learned probs min/max, commitment gap, parent-daughter distances, split
+symmetry, sister distance, local density, daughter displacement divergence), train a
+gradient-boosted classifier on 6bba, test on 44b6. Pre-registered kill criterion:
+precision >= 0.05 at recall >= 0.30.
+
+| recall | TP | FP | precision |
+|---|---|---|---|
+| 0.67 | 6 | 4339 | 0.001 |
+| 0.33 | 3 | 1261 | 0.002 |
+| 0.11 | 1 | 107 | 0.009 |
+
+Train: 45 positives in 63,892 plausible forks. Test: 9 in 57,847. **Best precision
+at recall >= 0.30 = 0.004 (needed 0.05) -- FAIL by >12x.** Combining the learned
+score with geometry/density/divergence does not beat the base rate.
+
+**Conclusion: divisions are not reachable with this data + model.** The chain of
+evidence is complete: daughters are detected (A2.0), but geometry (A2.2), the
+learned edge-prob (A2.3), and a multi-feature classifier (A2.4) all fail on the same
+wall -- ~1 real division per ~1,300 plausible candidate forks, and only ~125 GT
+divisions to learn from. The 0.1 division block stays at its incidental ~0.0385
+(the ILP's few forks). Rational strategy: defend the 0.9181 edge-term lead
+(Phase 4), not chase an unreachable +0.10. Kill criterion honoured.
