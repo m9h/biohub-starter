@@ -338,3 +338,25 @@ an embryo never seen during tuning. **This rules out winner's-curse overfitting 
 fold 0.** Caveat: N=4 and gate=8 were still *chosen* on fold 0; a formal
 pick-on-1-test-on-0 re-derivation would be strictly stronger, but the effect is
 robust enough (significant on both) to trust.
+
+### A1.2 — ILP birth/death asymmetry — DEAD END on top of the chain
+
+The public "strongest knob" is `appearance 0.0 / disappearance 1.4` (make track
+termination 14× costlier than initiation, suppressing fragmentation). Re-derived
+on held-out fold 0 (71 videos, L4), *with the Phase 1 chain applied*, against the
+default-weight chain (0.9181):
+
+| appearance / disappearance | score | Δ vs default | p |
+|---|---|---|---|
+| **0.1 / 0.1** (default) | **0.9181** | — | — |
+| 0.0 / 1.4 (public) | 0.9146 | −0.0035 | 0.45 |
+| 0.0 / 1.0 | 0.9148 | −0.0033 | 0.48 |
+
+Both asymmetric variants are **worse** (not significantly) and drive
+`division_jaccard` to **0.0000** — the heavy disappearance cost suppresses every
+division. The reason: our `min_track_len` + `motion_relink` chain already removes
+the short fragments the birth/death asymmetry targets, *while preserving divisions*
+(keep-division-components). Doing both is redundant, and the asymmetry additionally
+destroys the small division credit. **Solver-weight tuning for Phase 1 is now
+exhausted** — the remaining headroom is division *evidence* (Phase 2), not linking
+costs.
