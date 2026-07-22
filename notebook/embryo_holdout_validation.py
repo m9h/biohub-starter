@@ -1,5 +1,8 @@
 # %% [markdown]
-# # Your CV Doesn't Exist: Embryo-Held-Out Validation for This Competition
+# # Embryo-Held-Out Validation for This Competition
+#
+# *Morgan Hough — DevoWorm Group · Biopunk Lab.
+# Full write-up + code: [github.com/m9h/biohub-starter](https://github.com/m9h/biohub-starter)*
 #
 # **TL;DR** — The 199 training samples come from only **two embryos**, and the hidden
 # test set is *embryo-disjoint*. The baseline's default split is random **by sample**,
@@ -10,14 +13,19 @@
 # no `GroupKFold`, no held-out split, no OOF. Constants like `0.96875` (= 31/32),
 # `4.66` and `0.00375` are leaderboard-probe artifacts.
 #
-# With a public LB on 29% of the data and a private LB on the other 71% of an
-# embryo-disjoint test set, that seems worth fixing. This notebook provides:
+# Building an honest embryo-held-out split and re-deriving two standard post-processing
+# steps on it moves the score **0.8981 → 0.9181** (+0.0199, *p*<1e-4, 71 held-out
+# videos), the same chain **confirms on the second embryo** (fold 1, 128 videos:
+# 0.9092 → 0.9195, *p*<1e-4), and the gain **transfers to the leaderboard**
+# (CV +0.020 → LB +0.012). In every case the locally optimal constant differs from
+# the public one. This notebook shows how, with:
 #
 # 1. A drop-in **embryo-disjoint split generator**
-# 2. A measured **checkpoint comparison** on a held-out embryo (402ep vs 350ep vs 300ep)
-# 3. **Division statistics** from ground truth — and why we all over-predict ~10x
-# 4. A **runtime projection** for the real hidden test size
-# 5. A trap: **`node_recall` moves opposite to score**
+# 2. The **Phase-1 post-processing chain**, each step gated on a paired bootstrap,
+#    and its **cross-embryo confirmation**
+# 3. A measured **checkpoint comparison** (402ep vs 350ep vs 300ep — the "50ep" myth)
+# 4. **Division statistics** from ground truth — the open +0.10 problem
+# 5. Two traps: **`node_recall` moves opposite to score**, and runtime at test scale
 #
 # Everything is reproducible. Negative results included — several are the useful part.
 #
@@ -94,7 +102,65 @@ Path("embryo_splits.json").write_text(json.dumps(folds, indent=1))
 print("\nUse with:  predict_unet_transformer.py --splits embryo_splits.json --split 0")
 
 # %% [markdown]
-# ## 3. Checkpoint comparison on a held-out embryo
+# ## 3. The result: a post-processing chain that generalizes across embryos
+#
+# With the honest split in hand, I re-derived two standard post-processing steps
+# **on the held-out embryo** (never on the public LB), each gated on a paired
+# bootstrap over the size-weighted aggregate (10,000 resamples). Baseline = 402ep
+# weights + tracksdata ILP, `--det-threshold 0.96875`.
+#
+# **Step A — minimum track-length filter.** Drop weakly-connected lineage
+# components spanning `< N` frames, *exempting any component containing a division*
+# (a division TP needs an intact 5-generation window). Sweep on fold 0 (held-out
+# `44b6`, 71 videos):
+#
+# | N | score | Δ vs baseline |
+# |---|---|---|
+# | off | 0.8981 | — |
+# | 3 | 0.9067 | +0.0086 |
+# | **4** | **0.9107** | **+0.0126** |
+# | 6 *(public constant)* | 0.9037 | +0.0056 |
+# | 8 | 0.8908 | −0.0073 |
+#
+# The local optimum is **N=4**, *not* the public N=6 (which leaves +0.0070 on the
+# table). +0.0126, 95% CI [+0.0091, +0.0162], **p<1e-4**.
+#
+# **Step B — motion relink.** Reconnect prematurely-terminated tracks to next-frame
+# orphans by a constant-velocity, gated Hungarian assignment. By construction it can
+# create neither a division nor a merge — it repairs single tracks only. Stacked on
+# min-track-len 4, the optimal gate is **8 µm** (between the public tight/relaxed
+# 6/10): +0.0074, 95% CI [+0.0037, +0.0114], **p<1e-4**.
+#
+# **Full chain: 0.8981 → 0.9181** (+0.0199, p<1e-4).
+#
+# ### It is not fold-0 overfitting
+#
+# Both constants were chosen on fold 0. Applied **unchanged** to fold 1 (train
+# `44b6` → test `6bba`, 128 held-out videos) the chain still helps significantly:
+#
+# | fold | test embryo | baseline | + chain | Δ | p |
+# |---|---|---|---|---|---|
+# | 0 | `44b6` (71) | 0.8981 | 0.9181 | +0.0199 | <1e-4 |
+# | **1** | **`6bba` (128)** | **0.9092** | **0.9195** | **+0.0103** | **<1e-4** |
+#
+# Significant on **both** embryos. The smaller fold-1 Δ is expected (`6bba` starts
+# higher, less fragmentation to recover), but direction and significance hold on an
+# embryo never seen during tuning. This is the property the embryo-disjoint hidden
+# test actually rewards.
+#
+# ### CV tracks the leaderboard
+#
+# Two submissions bracket the result. Baseline (no LB-tuned constants): CV 0.8981 →
+# **LB 0.867**. Phase-1 chain: CV 0.9181 → **LB 0.879**. The local +0.020 carries to
+# +0.012 on the board — attenuated (the public set mixes both embryos) but same
+# direction. **The held-out CV predicts the leaderboard**, which is the whole point.
+#
+# *The filter + relink are `scripts/postprocess.py` in the repo; the paired
+# bootstrap is `scripts/compare_configs.py`. Both run on the saved `.geff`
+# predictions — no GPU needed.*
+
+# %% [markdown]
+# ## 4. Checkpoint comparison on a held-out embryo
 #
 # ### First, a correction that may be useful to everyone
 #
@@ -129,27 +195,41 @@ print("\nUse with:  predict_unet_transformer.py --splits embryo_splits.json --sp
 # optimistic.*
 
 # %% [markdown]
-# ## 4. Divisions: we all over-predict by ~10x
+# ## 5. Divisions: we all over-predict by ~10x
 
 # %%
-import tracksdata as td  # noqa: E402
+# `tracksdata` reads the GEFF graphs. Installs on-demand (enable internet), and the
+# section degrades gracefully if the data mount or the package isn't present, so the
+# notebook always runs top-to-bottom.
+div_times = []
+try:
+    import subprocess, sys
+    try:
+        import tracksdata as td
+    except ImportError:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "tracksdata"], check=True)
+        import tracksdata as td
 
-divs_per_video, div_times, tot_nodes = [], [], 0
-for p in sorted(DATA_DIR.glob("*.geff")):
-    g, _ = td.graph.IndexedRXGraph.from_geff(str(p))
-    N, E = g.node_attrs(), g.edge_attrs()
-    t = np.asarray(N["t"])
-    tot_nodes += len(t)
-    node_t = dict(zip(np.asarray(N["node_id"]).tolist(), t.tolist()))
-    outdeg = collections.Counter(np.asarray(E["source_id"]).tolist())
-    d = [n for n, k in outdeg.items() if k >= 2]
-    divs_per_video.append(len(d))
-    div_times += [node_t[n] for n in d]
+    assert DATA_DIR is not None, "competition data not mounted"
+    divs_per_video, tot_nodes = [], 0
+    for p in sorted(DATA_DIR.glob("*.geff")):
+        g, _ = td.graph.IndexedRXGraph.from_geff(str(p))
+        N, E = g.node_attrs(), g.edge_attrs()
+        t = np.asarray(N["t"])
+        tot_nodes += len(t)
+        node_t = dict(zip(np.asarray(N["node_id"]).tolist(), t.tolist()))
+        outdeg = collections.Counter(np.asarray(E["source_id"]).tolist())
+        d = [n for n, k in outdeg.items() if k >= 2]
+        divs_per_video.append(len(d))
+        div_times += [node_t[n] for n in d]
 
-print(f"total annotated nodes : {tot_nodes}")
-print(f"total GT divisions    : {sum(divs_per_video)}")
-print(f"divisions per video   : mean {np.mean(divs_per_video):.2f}")
-print(f"videos with ZERO      : {sum(1 for x in divs_per_video if x == 0)}/{len(divs_per_video)}")
+    print(f"total annotated nodes : {tot_nodes}")
+    print(f"total GT divisions    : {sum(divs_per_video)}")
+    print(f"divisions per video   : mean {np.mean(divs_per_video):.2f}")
+    print(f"videos with ZERO      : {sum(1 for x in divs_per_video if x == 0)}/{len(divs_per_video)}")
+except Exception as e:
+    print(f"[skipped live division scan: {e}]")
+    print("Reported from ground truth: 151 divisions total, mean 0.76/video, 112/199 zero.")
 
 # %% [markdown]
 # **151 divisions in the entire training set.** 112 of 199 videos have none.
@@ -189,7 +269,7 @@ print(f"videos with ZERO      : {sum(1 for x in divs_per_video if x == 0)}/{len(
 # suppresses fragmentation, which feeds **both** metric terms.
 
 # %% [markdown]
-# ## 5. A biological prior that does NOT work (tested)
+# ## 6. A biological prior that does NOT work (tested)
 #
 # Kane & Kimmel (1993) show zebrafish cleavage cycles 1–9 run on a ~15-min oscillator
 # with near-perfect embryo-wide synchrony. If that held here, off-phase division calls
@@ -197,14 +277,17 @@ print(f"videos with ZERO      : {sum(1 for x in divs_per_video if x == 0)}/{len(
 
 # %%
 ts = np.array(div_times)
-occupied = len(np.unique(ts))
-print(f"divisions span {occupied} distinct timepoints; mean t={ts.mean():.1f} sd={ts.std():.1f}")
-try:
-    from scipy import stats
-    d, pv = stats.kstest(ts / max(1, ts.max()), "uniform")
-    print(f"KS vs uniform: D={d:.3f}  p={pv:.4f}")
-except ImportError:
-    pass
+if ts.size:
+    occupied = len(np.unique(ts))
+    print(f"divisions span {occupied} distinct timepoints; mean t={ts.mean():.1f} sd={ts.std():.1f}")
+    try:
+        from scipy import stats
+        d, pv = stats.kstest(ts / max(1, ts.max()), "uniform")
+        print(f"KS vs uniform: D={d:.3f}  p={pv:.4f}")
+    except ImportError:
+        pass
+else:
+    print("Reported: KS vs uniform D=0.131, p=0.010 (weak) -- see markdown below.")
 
 # %% [markdown]
 # **Negative result.** Weak deviation from uniform, divisions spread across most
@@ -221,7 +304,7 @@ except ImportError:
 # prior which may survive post-MBT where the global one does not.
 
 # %% [markdown]
-# ## 6. Two traps
+# ## 7. Two traps
 #
 # ### `node_recall` moves opposite to score
 #
@@ -245,23 +328,27 @@ except ImportError:
 # `test/` contains 4 samples that are *copies from train*. The real hidden test is
 # "approximately the same size as the training dataset" — so ~199.
 #
-# Measured on one GPU, no TTA, no ILP: **~21.6 s/sample** → ~72 min for 199.
-# With the 8× D4 TTA the public recipe uses, that is roughly **8–10 h against the
-# 12 h cap**. Tight. Worth measuring before submission day.
+# **Measured on the actual Kaggle backend (2× T4), with ILP:** ~96.6 s/sample →
+# **5.34 h for 199**, ~55% under the 12 h cap. That headroom is real but finite:
+# it is *with* ILP and *without* TTA, so heavy test-time augmentation on top would
+# eat it. Measure before submission day rather than trusting an extrapolation.
 
 # %% [markdown]
 # ## Summary
 #
 # | Finding | Status |
 # |---|---|
-# | Only 2 embryos; test is embryo-disjoint | Random splits leak |
+# | Only 2 embryos; test is embryo-disjoint | Random splits leak — build an embryo-held-out split |
+# | **Post-processing chain, re-derived on the split** | **0.8981 → 0.9181** (+0.0199, p<1e-4) |
+# | **Cross-embryo confirmation** (fold 1, `6bba`, 128 vid) | **0.9092 → 0.9195** (+0.0103, p<1e-4) — not overfitting |
+# | **CV → LB** | 0.867 → 0.879; local +0.020 transfers to +0.012 |
+# | Every tuned constant | local optimum ≠ public value (N=4 vs 6, 8 µm vs 6/10, …) |
 # | Support pack is 402ep, not "50ep" | dataset name is wrong; more training **helps** (+0.020) |
-# | Divisions | 151 in training; we over-predict ~10× |
-# | Division headroom | up to **+0.10**, currently ~0.001 |
+# | Divisions | 151 in training; we over-predict ~10×; open **+0.10** block, currently ~0.001 |
 # | Embryo-wide synchrony prior | **negative** — wrong developmental window |
 # | `node_recall` | inversely related to score |
-# | 8× TTA on 199 samples | ~8–10 h of a 12 h budget |
+# | Runtime (2× T4, ILP, measured) | **5.34 h** for 199 of a 12 h cap |
 #
 # Happy to be corrected on any of it — particularly the synchrony test, where my
-# pooling assumption is the weak link. If anyone has run a genuine embryo-held-out
-# comparison, I would like to see how it lines up.
+# pooling assumption is the weak link. Full write-up, the post-processing code, and
+# the paired-bootstrap harness: **github.com/m9h/biohub-starter**.
