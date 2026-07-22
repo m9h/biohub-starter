@@ -64,6 +64,8 @@ make sense: [`notes/HISTORY_AND_IDEAS.md`](notes/HISTORY_AND_IDEAS.md) — from
 Sulston's hand-drawn worm lineage to why we run an ILP solver.
 
 Full numbers behind each claim: [`FINDINGS.md`](FINDINGS.md).
+Paper / Benchmark manuscript: [`notes/PAPER.md`](notes/PAPER.md).
+Presentation slide deck: [`notes/SLIDES.md`](notes/SLIDES.md).
 Papers and background: [`notes/READING_LIST.md`](notes/READING_LIST.md).
 Our running leaderboard record: [`CV_LB_LOG.md`](CV_LB_LOG.md).
 
