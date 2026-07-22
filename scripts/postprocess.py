@@ -176,9 +176,68 @@ def motion_relink(graph: td.graph.BaseGraph, max_um: float) -> int:
     return added
 
 
+def recover_divisions(graph: td.graph.BaseGraph, div_max_um: float,
+                      sister_max_um: float, sym_tol_um: float) -> int:
+    """Propose division forks by geometry (A2.1). The A2.0 diagnostic showed the
+    daughters are detected but not linked as a fork. For each node p that currently
+    continues to exactly one child c1, look for a *track-start* orphan o at the same
+    next frame that fits a symmetric-split signature, and add p->o so p divides.
+
+    Only orphans (in-degree 0) are eligible as the second daughter, so we never
+    create a merge. Gates are strict because division precision is the whole game.
+    Returns the number of forks added.
+    """
+    from scipy.optimize import linear_sum_assignment  # noqa: F401 (kept for parity)
+
+    N = graph.node_attrs(attr_keys=["node_id", "t", "z", "y", "x"])
+    ids = N["node_id"].to_list()
+    t = dict(zip(ids, N["t"].to_list()))
+    pos = {i: np.array([z, y, x]) * VOXEL_SCALE for i, z, y, x in
+           zip(ids, N["z"].to_list(), N["y"].to_list(), N["x"].to_list())}
+    E = graph.edge_attrs(attr_keys=["source_id", "target_id"])
+    src, dst = E["source_id"].to_list(), E["target_id"].to_list()
+    out_children: dict[int, list[int]] = {}
+    in_deg: dict[int, int] = {}
+    for s, d in zip(src, dst):
+        out_children.setdefault(s, []).append(d)
+        in_deg[d] = in_deg.get(d, 0) + 1
+
+    # orphan track-starts by frame (in-degree 0, not the first frame)
+    orphans_by_t: dict[int, list[int]] = {}
+    for i in ids:
+        if in_deg.get(i, 0) == 0:
+            orphans_by_t.setdefault(t[i], []).append(i)
+
+    new_edges, used = [], set()
+    for p, kids in out_children.items():
+        if len(kids) != 1:              # only single-continuation nodes can gain a sister
+            continue
+        c1 = kids[0]
+        cand = []
+        for o in orphans_by_t.get(t[c1], []):
+            if o == c1 or o in used:
+                continue
+            d_po = float(np.linalg.norm(pos[p] - pos[o]))
+            d_cc = float(np.linalg.norm(pos[c1] - pos[o]))
+            d_pc1 = float(np.linalg.norm(pos[p] - pos[c1]))
+            if (d_po <= div_max_um and d_cc <= sister_max_um
+                    and abs(d_pc1 - d_po) <= sym_tol_um):
+                cand.append((abs(d_pc1 - d_po) + d_cc, o))   # prefer symmetric & tight
+        if cand:
+            cand.sort()
+            o = cand[0][1]
+            used.add(o)
+            new_edges.append({"source_id": p, "target_id": o, "solution": True,
+                              "edge_dist": float(np.linalg.norm(pos[p] - pos[o])),
+                              "edge_prob": 0.5})
+    if new_edges:
+        graph.bulk_add_edges(new_edges)
+    return len(new_edges)
+
+
 def process_geff(
     in_geff: Path, out_geff: Path, min_track_len: int, keep_division_components: bool,
-    relink_max_um: float = 0.0,
+    relink_max_um: float = 0.0, recover_div: tuple[float, float, float] | None = None,
 ) -> tuple[int, int, int, int]:
     graph = _load(in_geff)
     n0, e0 = graph.num_nodes(), graph.num_edges()
@@ -187,6 +246,8 @@ def process_geff(
     # filter by length, so the filter judges tracks after they've been repaired.
     if relink_max_um > 0:
         motion_relink(graph, relink_max_um)
+    if recover_div is not None:
+        recover_divisions(graph, *recover_div)
 
     if min_track_len > 1:
         drop = short_component_nodes(graph, min_track_len, keep_division_components)
@@ -211,6 +272,11 @@ def main() -> None:
     ap.add_argument("--relink-max-um", type=float, default=0.0,
                     help="Motion-relink loose ends to next-frame orphans within N um "
                          "(0 = off). Runs before the length filter.")
+    ap.add_argument("--recover-div", type=float, nargs=3, default=None,
+                    metavar=("DIV_UM", "SISTER_UM", "SYM_UM"),
+                    help="Geometric division recovery: add a fork to an orphan sister "
+                         "when parent-daughter<=DIV_UM, sister-sister<=SISTER_UM, "
+                         "and split is symmetric within SYM_UM. Off if unset.")
     args = ap.parse_args()
 
     geffs = sorted(args.in_dir.glob("*.geff"))
@@ -222,6 +288,7 @@ def main() -> None:
         n0, e0, n1, e1 = process_geff(
             g, args.out_dir / g.name, args.min_track_len,
             not args.no_keep_division_components, args.relink_max_um,
+            tuple(args.recover_div) if args.recover_div else None,
         )
         tot_n0 += n0; tot_n1 += n1; tot_e0 += e0; tot_e1 += e1
         print(f"{g.stem}: nodes {n0}->{n1} ({n0-n1} dropped), edges {e0}->{e1}")

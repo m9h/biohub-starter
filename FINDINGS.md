@@ -392,3 +392,28 @@ Caveat: Q2's merge signature is weakened by sparse GT (~2.8 annotated nuclei/fra
 so two GT nodes rarely fall within 7 µm of a fork parent by chance). Q1 is not
 affected — it checks known GT daughter positions against our own dense detections —
 and Q1 alone settles the direction.
+
+### A2.1/A2.2 — geometric division recovery — DEAD END (points to learned evidence)
+
+A2.0 established the daughters are detected but not linked into forks. The cheapest
+fix is to add a fork edge to an orphan "sister" by geometry alone (symmetric split:
+parent-daughter, sister-sister, and split-symmetry gates). Tested on fold 0, in the
+chain (relink 8 -> recover-div -> min-track-len 4):
+
+| recovery gates (div/sister/sym um) | score | division_jaccard |
+|---|---|---|
+| off (chain) | **0.9181** | **0.0385** |
+| 6 / 8 / 3 | 0.9046 | 0.0168 |
+| 4 / 5 / 1.5 | 0.9141 | 0.0145 |
+
+**Both worse -- and division_jaccard goes DOWN, not up.** The proximity+symmetry
+signature matches coincidental orphan pairs far more often than real sisters, so it
+adds false forks (precision falls) and corrupts the 5-generation windows of the few
+real divisions we had. Only 15 of ~51 detected daughters are even free orphans; 36
+are already mid-track, unreachable without risky re-parenting.
+
+**Geometry alone is insufficient for division precision.** This is the empirical
+case for LEARNED division evidence -- Linajea-style backward-offset regression
+(train a head so each daughter predicts a vector to its parent; mutual agreement =
+division). That is a training investment, not a post-processing pass, and it is the
+next real Phase 2 step -- it needs the GPU.
