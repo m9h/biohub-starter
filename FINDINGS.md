@@ -360,3 +360,35 @@ the short fragments the birth/death asymmetry targets, *while preserving divisio
 destroys the small division credit. **Solver-weight tuning for Phase 1 is now
 exhausted** — the remaining headroom is division *evidence* (Phase 2), not linking
 costs.
+
+## Phase 2 — Divisions
+
+### A2.0 diagnostic (blocking) — missed divisions are a LINKING problem, not segmentation
+
+Ultrack's central claim is that missed/false divisions are segmentation merges
+upstream. We tested it on held-out fold 0 (`44b6`, 71 videos, 26 GT divisions, 145
+predicted forks) with `scripts/diagnose_divisions.py`:
+
+**Q1 — for each GT division, are the daughter cells detected?** (predicted node
+within 7 µm of each GT daughter at its frame)
+
+| | count | |
+|---|---|---|
+| **both daughters detected** | **25 / 26 (96.2%)** | → linking miss: cells found, fork not linked |
+| one daughter | 1 (3.8%) | partial |
+| neither | 0 (0.0%) | detection/segmentation miss |
+
+**Q2 — are false forks merges or links?** 99.3% have ≤1 GT nucleus at the parent
+(link signature); 0% have ≥2 (merge signature).
+
+**Verdict: the recall ceiling is LINKING, not detection.** In 96% of missed
+divisions we already detect both daughters — the linker simply fails to connect
+them into a fork. Ultrack's segmentation-merge thesis does not hold here (consistent
+with detection recall 0.9987). **Phase 2 targets the linker** — division-aware edge
+evidence (Linajea-style backward-offset regression: daughters regress a vector to
+the parent; mutual agreement = division), not segmentation.
+
+Caveat: Q2's merge signature is weakened by sparse GT (~2.8 annotated nuclei/frame,
+so two GT nodes rarely fall within 7 µm of a fork parent by chance). Q1 is not
+affected — it checks known GT daughter positions against our own dense detections —
+and Q1 alone settles the direction.
