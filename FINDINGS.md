@@ -472,3 +472,27 @@ wall -- ~1 real division per ~1,300 plausible candidate forks, and only ~125 GT
 divisions to learn from. The 0.1 division block stays at its incidental ~0.0385
 (the ILP's few forks). Rational strategy: defend the 0.9181 edge-term lead
 (Phase 4), not chase an unreachable +0.10. Kill criterion honoured.
+
+## Track B (research) — unbalanced OT for division detection
+
+### B3.1 — OT signal does NOT survive detector output — KILL criterion met
+
+The GT-node probe separated dividers from non-dividers by unbalanced-OT row-sum at
+Cohen's d ~ 2.9 (a dividing mother transports mass to two daughters; the tau term
+lets its row exceed 1). B3.1 re-runs the probe over real DETECTIONS, labelling a
+source detection a divider iff it matches a GT divider (<=7 um). Fold 0, sweep over
+epsilon in {0.03,0.1,0.3} x tau in {1,2,5}:
+
+| | divider row-sum | non-divider row-sum | Cohen's d |
+|---|---|---|---|
+| GT nodes (prior) | 1.333 | 1.029 | 2.94 |
+| **detector output** | 1.029 | 1.023 | **0.21 (best)** |
+
+**Pre-registered kill: d<1.0 -> stop. Best d = 0.21 -> STOP.** On sparse GT a
+divider is geometrically isolated with its two daughters; on dense detector output
+every cell has many neighbours, so the transport mass is uniform and the divider is
+not special. The mass-splitting signal is real *in principle* (GT) but washed out by
+real detection density -- the same base-rate/dense-field wall that defeated the
+A2.4 classifier, reached independently. The GT-only d~2.9 stands as a mechanistic
+characterisation, not a usable detector. B3.4 (learn the cost via optimistix
+implicit-diff) is gated on B3.1 and is therefore not pursued.
