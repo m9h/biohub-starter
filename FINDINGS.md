@@ -593,3 +593,25 @@ results are correct **conditioned on this competition's sparse 2-embryo GT and t
 baseline model** -- not in general. GATING QUESTION: does the competition allow
 external data / pretrained weights? If yes, the real endgame is train-on-Zebrahub /
 use-ultrack, and divisions re-open.
+
+### RESOLVED — external data & pretrained models ARE allowed (rules Section 2.6)
+
+Competition rules Section 2.6 (External Data and Tools): "The use of external data and
+models is acceptable unless specifically prohibited by the Host," provided it is
+publicly available and free to all. **Zebrahub (CC0) and Ultrack (open source) both
+qualify.** Also: rules 3.18.f -- the Public LB is a *representative sample of the real
+test data*, not copies-of-train, so the ~0.97 scores are genuine on hidden embryos;
+my "collapses at the patched rerun" speculation is retracted. Only 3.4.b (no hand-
+labeling the test/validation records) constrains us -- training on Zebrahub's other
+embryos is fine.
+
+**Endgame pivot.** This is a DATA + MODEL problem, not a post-processing one. The
+honest ceiling is set by tracker quality, and the baseline support-pack model (~0.92)
+is not it. The real levers for the remaining two months:
+1. **Ultrack** (the lab's SOTA multi-hypothesis ILP tracker) evaluated on our
+   embryo-disjoint folds -- does a better model alone break 0.92?
+2. **Train on Zebrahub dense lineages** -- thousands of divisions (vs 125) re-opens
+   the division block that A2.x/B3.1 proved unreachable *on the sparse baseline*.
+All of our infrastructure (embryo-disjoint harness, paired bootstrap, the sparse-vs-
+dense metric analysis) is exactly what's needed to evaluate a Zebrahub-trained model
+honestly. The negative results stand as scoped; the ceiling does not.
