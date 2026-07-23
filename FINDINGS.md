@@ -573,3 +573,23 @@ patched scorer applies and those scores collapse.
 (both embryo folds, LB-tracking) is the real, robust result and is well-positioned
 for the private board. Endgame = maximize HONEST score + robustness for the rerun,
 not chase an exploited public number.
+
+### CORRECTION — the "0.97 is an exploit" conclusion was overconfident
+
+The prior conclusion assumed the public support-pack model is the honest ceiling.
+That is wrong: it is a *baseline*, not the best available tracker. Two public assets
+from the same lab change the picture:
+- **Ultrack** (Bragantini, Royer 2024; arXiv:2308.04526) -- the lab's SOTA tracker,
+  open source, and the method that produced the Zebrahub lineages.
+- **Zebrahub** (zebrahub.sf.czbiohub.org) -- DENSE light-sheet lineages across many
+  more embryos than the competition's two.
+
+If external data / pretrained models are permitted, a competitor training on
+Zebrahub's DENSE lineages (thousands of divisions, not 125) or running ultrack would
+score ~0.97 **honestly** -- dense supervision dissolves exactly the base-rate wall
+that defeated A2.4/B3.1, and a dense accurate prediction (N_pred ~ N_true) needs no
+sparsification trick. Our "divisions unreachable / sparsification unachievable"
+results are correct **conditioned on this competition's sparse 2-embryo GT and the
+baseline model** -- not in general. GATING QUESTION: does the competition allow
+external data / pretrained weights? If yes, the real endgame is train-on-Zebrahub /
+use-ultrack, and divisions re-open.
