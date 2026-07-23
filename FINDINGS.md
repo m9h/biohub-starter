@@ -530,3 +530,24 @@ the winnable frontier the division work is not -- ceiling 0.988, and even partia
 selection closes most of the 0.879->0.976 public gap. (Also reframes the private-LB
 picture: sparsification transfers if it keys on a real annotation bias; it does not
 if GT is a random subset. That is the next thing to measure.)
+
+### Selector signal — GT cells are in LONGER tracks (the one honest handle)
+
+Comparing GT-matched vs unmatched detections on fold 0 (per-node, ~8.7k matched vs
+760k unmatched):
+
+| feature | GT-matched | unmatched |
+|---|---|---|
+| depth z | 48.8 | 48.8 (no signal) |
+| local density (15 um) | 8.0 | 8.0 (no signal) |
+| **track length** | **median 34** | **median 16** |
+
+Track length is the only GT-free signal, and it is real (2x). But a *hard* length
+cutoff already saturated at +0.0126 (the min-track-len sweep) because GT also
+contains short tracks. The open test: a LEARNED node-selector (length + mean edge
+prob + track smoothness + ...) trained to predict GT-membership. Unlike the division
+classifier (45 positives, failed), node selection has **~8,700 positives** -- a
+trainable base rate. If it approaches the oracle (0.988) it is the competition's
+real lever; if it plateaus near length-alone, honest sparsification is ~exhausted
+and the public 0.97 cluster is likely metric-exploited (collapses at the patched
+private rerun) -- in which case our honest 0.92 is well-positioned privately.
