@@ -496,3 +496,37 @@ real detection density -- the same base-rate/dense-field wall that defeated the
 A2.4 classifier, reached independently. The GT-only d~2.9 stands as a mechanistic
 characterisation, not a usable detector. B3.4 (learn the cost via optimistix
 implicit-diff) is gated on B3.1 and is therefore not pursued.
+
+## THE METRIC REFRAME — sparsification is the real lever (+0.07 ceiling)
+
+Reading the scorer exactly (`metrics.py`):
+```
+adj_edge_jaccard = max(0, edge_jaccard * (1 - 0.1 * (N_pred - N_true)/N_true))   # NO upper clamp
+score            = adj_edge_jaccard + 0.1 * division_jaccard
+```
+`N_true` is the **dense** `estimated_number_of_nodes` (~47,714/video); the annotated
+GT is **sparse** (~700 nodes/video, ~1.3%). Two consequences we had been ignoring:
+
+1. **Under-predicting nodes multiplies the score, up to x1.1** (as N_pred -> 0). Our
+   dense chain predicts 25k-72k nodes/video -> multiplier ~1 or a *penalty*.
+2. **The metric rewards a SPARSE graph.** Unmatched predicted edges are largely not
+   penalised as FP, but every predicted node inflates N_pred and shrinks the bonus.
+
+**Oracle test (fold 0):** keep only the 1.3% of predicted nodes that match a GT node
+(<=7 um), drop the rest:
+
+| | nodes | score | adj_edge_jaccard |
+|---|---|---|---|
+| dense chain | 2,127,482 | 0.9181 | 0.9143 |
+| **oracle-sparse (GT-matched only)** | **27,035 (1.3%)** | **0.9882** | 0.9843 |
+
+**+0.07 from node count alone**, landing above the current public leaderboard leader
+(0.976). The oracle uses GT to select, so it is a ceiling, not a method -- but it
+proves the leaders are almost certainly **sparsifying**, not out-tracking us. Our
+entire dense detect-everything pipeline is metric-misaligned.
+
+**The new problem:** select the ~380 GT-relevant nodes/video WITHOUT GT. This is
+the winnable frontier the division work is not -- ceiling 0.988, and even partial
+selection closes most of the 0.879->0.976 public gap. (Also reframes the private-LB
+picture: sparsification transfers if it keys on a real annotation bias; it does not
+if GT is a random subset. That is the next thing to measure.)
