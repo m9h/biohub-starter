@@ -630,3 +630,23 @@ Decisive experiment: train a division classifier on ZSNS001's 635k divisions wit
 SCALE-INVARIANT features (ZSNS001 is a different volume/resolution), test on
 competition fold 0 -- does dense supervision beat the A2.4 precision wall? More
 embryos (ZSNS002, ...) and the raw imaging (ZSNS001.ome.zarr) are also available.
+
+### Dense supervision confirms: divisions need APPEARANCE, not geometry
+
+Trained the A2.4 division classifier on ZSNS001's dense divisions -- 40,000 positives
+(vs 45) -- with scale-invariant geometric features (parent-daughter distances, sister
+distance, split symmetry, daughter divergence, local density).
+
+**Self-AUC = 0.613. Feature means nearly identical between division and non-division:**
+dmin 0.39/0.39, sister 1.05/0.98, symmetry 0.38/0.33, density 84/84.
+
+**The wall is feature MODALITY, not data quantity.** With 900x more examples the
+geometry still cannot separate the classes, because the tissue is dense (~84 neighbours
+within a few cell-widths) -- every cell's two nearest next-frame neighbours look like a
+fork. This is why *every* division approach failed identically (A2.2 geometry, A2.3
+edge-prob, A2.4 classifier, B3.1 OT): they all discard the image. A mitotic cell's
+signal is VISUAL (chromatin condensation, rounding, brightness), absent from point/track
+features. The corrected path: an appearance model -- image patches at candidate division
+sites, trained on ZSNS001's 635k divisions WITH the raw imaging (ZSNS001.ome.zarr), a
+CNN mitosis detector. Bigger lift (TB imaging + patch CNN) but the biologically correct
+signal, and where developmental-biology domain knowledge actually applies.
