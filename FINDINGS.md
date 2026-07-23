@@ -615,3 +615,18 @@ is not it. The real levers for the remaining two months:
 All of our infrastructure (embryo-disjoint harness, paired bootstrap, the sparse-vs-
 dense metric analysis) is exactly what's needed to evaluate a Zebrahub-trained model
 honestly. The negative results stand as scoped; the ceiling does not.
+
+## Track B' — dense external supervision located (Zebrahub ZSNS001)
+
+`https://public.czbiohub.org/royerlab/zebrahub/imaging/single-objective/ZSNS001_tracks.csv`
+(890 MB, CC0). Columns `track_id, t, z, y, x, parent_track_id`. Whole zebrafish
+embryo, same modality as the competition:
+- **21.7M node-detections**, 791 timepoints, 1.6M tracks
+- **635,041 divisions** (parent track with >=2 daughters) -- vs the competition's 151
+
+This is the dense supervision the division dead-ends (A2.4: 45 positives -> precision
+0.004; B3.1) all needed. Rules Section 2.6 permits it (public, CC0, free to all).
+Decisive experiment: train a division classifier on ZSNS001's 635k divisions with
+SCALE-INVARIANT features (ZSNS001 is a different volume/resolution), test on
+competition fold 0 -- does dense supervision beat the A2.4 precision wall? More
+embryos (ZSNS002, ...) and the raw imaging (ZSNS001.ome.zarr) are also available.
