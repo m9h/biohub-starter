@@ -551,3 +551,25 @@ trainable base rate. If it approaches the oracle (0.988) it is the competition's
 real lever; if it plateaus near length-alone, honest sparsification is ~exhausted
 and the public 0.97 cluster is likely metric-exploited (collapses at the patched
 private rerun) -- in which case our honest 0.92 is well-positioned privately.
+
+### Node/track selection FAILS — sparsification is unreachable honestly
+
+- **Learned node-selector** (train 6bba, test 44b6; features = track length, span,
+  mean edge-prob, degree, depth, density): test **AUC 0.644**. Dropping selected
+  nodes shattered track continuity -> score collapsed to 0.05-0.27 (vs chain 0.9181,
+  oracle 0.9882).
+- **Track-level** (correct granularity): only **681 GT-tracks of 103,470 (0.7%)**,
+  and features do not separate (GT length median 6 vs 5; GT mean edge-prob 0.7 vs
+  0.8). The earlier "34 vs 16" was a node-weighted artifact of a few long tracks.
+
+**Conclusion: the 0.988 oracle is unreachable.** GT-annotation is not predictable
+from any computable feature. Honest sparsification saturates at what min-track-len
+already gave (+0.0126). Therefore the public ~0.97 cluster cannot be honest
+sparsification -- it is the known out-of-bounds hub-node metric exploit, which is
+PATCHED in the scorer shipped with the repo. At the private rerun (Sept 29) the
+patched scorer applies and those scores collapse.
+
+**Strategic consequence:** the public leaderboard is an illusion. Our honest 0.9181
+(both embryo folds, LB-tracking) is the real, robust result and is well-positioned
+for the private board. Endgame = maximize HONEST score + robustness for the rerun,
+not chase an exploited public number.
