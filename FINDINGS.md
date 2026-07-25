@@ -650,3 +650,20 @@ features. The corrected path: an appearance model -- image patches at candidate 
 sites, trained on ZSNS001's 635k divisions WITH the raw imaging (ZSNS001.ome.zarr), a
 CNN mitosis detector. Bigger lift (TB imaging + patch CNN) but the biologically correct
 signal, and where developmental-biology domain knowledge actually applies.
+
+### Appearance PoC (static, level-1) — weak: AUC 0.556
+
+Read image patches at 1500 division vs 1500 non-division sites from ZSNS001 level-1
+imaging (2.48/0.878 um; 10 frames, pulled lazily from the remote OME-Zarr in 6s),
+hand-crafted appearance features (brightness, central/background ratio, contrast,
+bright-blob volume, gradient). 5-fold **AUC = 0.556** (geometry-only was 0.613).
+
+Faint real trend consistent with mitotic condensation/rounding -- dividing cells
+slightly brighter-centered (central 51 vs 45, ratio 1.45 vs 1.37) and larger bright
+volume (957 vs 830) -- but far too weak to be usable. Two untested levers remain:
+**full resolution** (level 0, 2x finer -- may resolve chromatin condensation the
+coarse level blurs) and, more importantly, **temporal dynamics** (mitosis is a
+process: condensation -> metaphase -> split; a single static frame misses it -- a
+short temporal window t-2..t+1 should be far more discriminative). The static PoC
+lowers confidence in the appearance pipeline but does not test the temporal signal,
+which is the biologically strongest and entirely untried.
