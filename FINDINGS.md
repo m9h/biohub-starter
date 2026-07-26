@@ -667,3 +667,23 @@ process: condensation -> metaphase -> split; a single static frame misses it -- 
 short temporal window t-2..t+1 should be far more discriminative). The static PoC
 lowers confidence in the appearance pipeline but does not test the temporal signal,
 which is the biologically strongest and entirely untried.
+
+### Temporal appearance PoC — AUC 0.487 — and the UNIFIED root cause: tissue density
+
+Temporal window t-2..t+1 at level 1, per-frame appearance + dynamics (brightness
+slope, bright-blob-count delta capturing the 1->2 nuclear split, volume change).
+**5-fold AUC = 0.487** (below random). The diagnostic feature: **nblob_start = 22.9**
+-- the 30um patch around a dividing cell holds ~22 nuclei, not one. The 1->2 split
+signal is swamped; nblob_delta (-0.63 vs -0.02) is noise.
+
+**Unified conclusion after SEVEN approaches: the wall is TISSUE DENSITY, not data
+quantity or feature modality.** ~84 neighbours within a few cell-widths / ~22 nuclei
+per local patch defeats every LOCAL signal -- geometry (A2.2), edge-prob (A2.3),
+dense classifier (A2.4, AUC 0.61), OT (B3.1), dense-geometry (900x data, AUC 0.613),
+static appearance (0.556), temporal appearance (0.487). No local feature isolates one
+dividing cell from ~20 neighbours. Division detection requires per-cell instance
+segmentation+tracking (i.e. the tracking problem itself), which the baseline's linker
+cannot do for divisions and which the one tool that can (Ultrack) is too heavy
+(489s/video preprocessing) for the 12h offline notebook. This is an airtight,
+mechanistically-explained negative result: in dense embryonic tissue with this
+labelling, division detection is unreachable by any local post-hoc signal.
